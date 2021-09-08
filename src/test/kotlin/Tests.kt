@@ -1,6 +1,6 @@
 import kotlin.test.*
 
-internal class Test1 {
+internal class Tests {
 
     @Test
     fun test1() {
