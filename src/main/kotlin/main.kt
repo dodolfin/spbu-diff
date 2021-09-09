@@ -17,7 +17,7 @@ fun terminateOnError(exitMessage: String) {
  */
 fun checkArguments(args: Array<String>) {
     if (args.size < 2) {
-        terminateOnError("Not enough arguments (required 2 paths to files; got $args).")
+        terminateOnError("Not enough arguments (required 2 paths to files; got ${ args.size }).")
     }
 }
 
