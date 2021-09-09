@@ -92,6 +92,29 @@ fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boo
     return solution
 }
 
+/*
+ * Выводит объединение двух файлов, показывающее удаление строки минусом в начале, а добавление — плюсом.
+ */
+fun plainOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<Array<Boolean>>) {
+    var pointer1 = 0; var pointer2 = 0
+
+    while (pointer1 < file1.size || pointer2 < file2.size) {
+        if (pointer2 >= file2.size || (pointer1 < file1.size && !linesMarkers[0][pointer1])) {
+            println("- ${file1[pointer1]}")
+            pointer1++
+        } else if (pointer1 >= file1.size || !linesMarkers[1][pointer2]) {
+            println("+ ${file2[pointer2]}")
+            pointer2++
+        } else {
+            println("  ${file1[pointer1]}")
+            pointer1++; pointer2++
+        }
+    }
+}
+
 fun main(args: Array<String>) {
-    TODO()
+    val file1 = readFromFile("src\\test\\fileA.txt")
+    val file2 = readFromFile("src\\test\\fileB.txt")
+    val markers = compareTwoFiles(file1, file2)
+    plainOutput(file1, file2, markers)
 }
