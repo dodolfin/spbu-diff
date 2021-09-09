@@ -13,6 +13,15 @@ fun terminateOnError(exitMessage: String) {
 }
 
 /*
+ * Проверяет, что в программу передано хотя бы 2 аргумента (два файла для сравнения).
+ */
+fun checkArguments(args: Array<String>) {
+    if (args.size < 2) {
+        terminateOnError("Not enough arguments (required 2 paths to files; got $args).")
+    }
+}
+
+/*
  * Считать содержимое файла, находящегося по адресу [pathToFile]. Пока что эта функция производит и проверки,
  * связанные с файлом (существование, право доступа к нему и т. д.)
  */
@@ -113,8 +122,11 @@ fun plainOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<
 }
 
 fun main(args: Array<String>) {
-    val file1 = readFromFile("src\\test\\fileA.txt")
-    val file2 = readFromFile("src\\test\\fileB.txt")
-    val markers = compareTwoFiles(file1, file2)
-    plainOutput(file1, file2, markers)
+    checkArguments(args)
+
+    val file1 = readFromFile(args[args.size - 2])
+    val file2 = readFromFile(args[args.size - 1])
+
+    val linesMarkers = compareTwoFiles(file1, file2)
+    plainOutput(file1, file2, linesMarkers)
 }
