@@ -4,6 +4,10 @@ import java.io.InputStream
 
 const val SIZE_LIMIT = 1024 * 1024 * 1024
 
+enum class ReconstructionMarker {
+    NONE, REMOVE_FROM_LCS, LEFT, UP
+}
+
 /*
  * В случае ошибки вывести сообщение [exitMessage] и завершить программу с ненулевым кодом возврата.
  */
@@ -60,7 +64,7 @@ fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boo
      * а в массиве LCSReconstruction хранятся данные для восстановления.
      */
     val LCSMemoization = Array(file1.size + 1) { Array(file2.size + 1) { 0 } }
-    val LCSReconstruction = Array(file1.size + 1) { Array(file2.size + 1) { 0 } }
+    val LCSReconstruction = Array(file1.size + 1) { Array(file2.size + 1) { ReconstructionMarker.NONE } }
 
     /*
      * В массиве LCSReconstruction значение
@@ -72,13 +76,13 @@ fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boo
         for (prefix2 in file2.indices) {
             if (file1[prefix1] == file2[prefix2]) {
                 LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2] + 1
-                LCSReconstruction[prefix1 + 1][prefix2 + 1] = 1
+                LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.REMOVE_FROM_LCS
             } else if (LCSMemoization[prefix1][prefix2 + 1] > LCSMemoization[prefix1 + 1][prefix2]) {
                 LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2 + 1]
-                LCSReconstruction[prefix1 + 1][prefix2 + 1] = -1
+                LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.LEFT
             } else {
                 LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1 + 1][prefix2]
-                LCSReconstruction[prefix1 + 1][prefix2 + 1] = -2
+                LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.UP
             }
         }
     }
@@ -88,13 +92,13 @@ fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boo
     var prefix1 = file1.size; var prefix2 = file2.size
     while (prefix1 != 0 && prefix2 != 0) {
         when (LCSReconstruction[prefix1][prefix2]) {
-            1 -> {
+            ReconstructionMarker.REMOVE_FROM_LCS -> {
                 solution[0][prefix1 - 1] = true
                 solution[1][prefix2 - 1] = true
                 prefix1--; prefix2--
             }
-            -1 -> prefix1--
-            -2 -> prefix2--
+            ReconstructionMarker.LEFT -> prefix1--
+            ReconstructionMarker.UP -> prefix2--
         }
     }
 
