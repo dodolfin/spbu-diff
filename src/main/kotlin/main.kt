@@ -17,7 +17,7 @@ fun terminateOnError(exitMessage: String) {
 }
 
 /*
- * Проверяет, что в программу передано хотя бы 2 аргумента (два файла для сравнения).
+ * Проверяет, что в программу передано хотя бы 2 аргумента [args] (два файла для сравнения).
  */
 fun checkArguments(args: Array<String>) {
     if (args.size < 2) {
@@ -106,7 +106,7 @@ fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boo
 }
 
 /*
- * Выводит объединение двух файлов, показывающее удаление строки минусом в начале, а добавление — плюсом.
+ * Выводит объединение двух файлов [file1] и [file2], показывающее удаление строки минусом в начале, а добавление — плюсом.
  */
 fun plainOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<Array<Boolean>>) {
     var pointer1 = 0; var pointer2 = 0
