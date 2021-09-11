@@ -69,4 +69,32 @@ internal class Tests {
             stream.reset()
         }
     }
+
+    @Test
+    fun normalOutputTests() {
+        val file1Values = arrayOf(
+            arrayOf("a", "b", "c", "d", "e", "f", "g", "h"),
+            arrayOf("d", "e", "f"),
+            arrayOf("a", "b", "c", "d"),
+            arrayOf("a", "b", "c", "d", "e", "f", "g"),
+        )
+        val file2Values = arrayOf(
+            arrayOf("b", "c", "e", "g", "h"),
+            arrayOf("a", "b", "c", "d", "e", "f"),
+            arrayOf("e", "f", "g"),
+            arrayOf("a", "b", "p", "q", "r", "f", "g"),
+        )
+        val answers = arrayOf(
+            "1d0\n< a\n4d2\n< d\n6d3\n< f\n".lines(),
+            "0a1,3\n> a\n> b\n> c\n".lines(),
+            "1,4c1,3\n< a\n< b\n< c\n< d\n---\n> e\n> f\n> g\n".lines(),
+            "3,5c3,5\n< c\n< d\n< e\n---\n> p\n> q\n> r\n".lines(),
+        )
+
+        for (i in file1Values.indices) {
+            normalOutput(file1Values[i], file2Values[i], compareTwoFiles(file1Values[i], file2Values[i]))
+            assertEquals(answers[i], stream.toString().lines())
+            stream.reset()
+        }
+    }
 }
