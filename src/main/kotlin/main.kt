@@ -9,6 +9,13 @@ enum class ReconstructionMarker {
 }
 
 /*
+ * Тип данных, определяющий измененный блок в файле. [absoluteStartIndex] — индекс строки в файле (с 0), с которой
+ * начинается измененный блок. [relativeStartIndex] — количество общих для двух файлов строк, встретившихся
+ * до начала изменённого блока. [length] — длина изменённого блока в строчках.
+ */
+data class EditedBlock(val absoluteStartIndex: Int, val relativeStartIndex: Int, var length: Int)
+
+/*
  * В случае ошибки вывести сообщение [exitMessage] и завершить программу с ненулевым кодом возврата.
  */
 fun terminateOnError(exitMessage: String) {
@@ -107,6 +114,7 @@ fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boo
 
 /*
  * Выводит объединение двух файлов [file1] и [file2], показывающее удаление строки минусом в начале, а добавление — плюсом.
+ * Общие для двух файлов линии отмечены true в [linesMarkers].
  */
 fun plainOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<Array<Boolean>>) {
     var pointer1 = 0; var pointer2 = 0
@@ -120,6 +128,87 @@ fun plainOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<
             pointer2++
         } else {
             println("  ${file1[pointer1]}")
+            pointer1++; pointer2++
+        }
+    }
+}
+
+/*
+ * По отметкам для каждой строки общая она для двух файлов или нет [linesMarkers] формирует список изменённых блоков
+ * с «координатами» (в строках, относительно начала файла) изменений.
+ */
+fun getEditedBlocks(linesMarkers: Array<Boolean>): List<EditedBlock> {
+    val blocks = mutableListOf<EditedBlock>()
+    var commonLinesCounter = 0
+
+    for (i in linesMarkers.indices) {
+        if (linesMarkers[i]) {
+            ++commonLinesCounter
+        } else if (i == 0 || linesMarkers[i - 1]) {
+            blocks.add(blocks.size, EditedBlock(i, commonLinesCounter, 1))
+        } else {
+            blocks[blocks.lastIndex].length++
+        }
+    }
+
+    return blocks
+}
+
+/*
+ * «Нормальный» формат вывода (применяется по умолчанию в версии diff для Linux)
+ * Изменённые блоки выводятся без контекста вокруг; удаленные строки отмечаются знаком
+ * < в начале строки, добавленные — знаком >. Начало каждого блока предваряет описание изменений в формате f1r|op|f2r (в
+ * выводе без |), где op — характер операции (a — добавление, d — удаление, c — изменение), f1r описывает область в
+ * первом файле, откуда были удалены или куда были бы вставлены строчки из второго файла, если бы их вставили в первый.
+ * Аналогично, f2r описывает область во втором файле, куда были добавлены или где были бы строчки из первого файла,
+ * если бы их не удалили.
+ * Общие для двух файлов линии отмечены true в [linesMarkers].
+ */
+fun normalOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<Array<Boolean>>) {
+    val blocks1 = getEditedBlocks(linesMarkers[0])
+    val blocks2 = getEditedBlocks(linesMarkers[1])
+
+    var pointer1 = 0; var pointer2 = 0
+    var deletedLinesCnt = 0; var addedLinesCnt = 0
+    while (pointer1 <= blocks1.lastIndex || pointer2 <= blocks2.lastIndex) {
+        if (pointer2 > blocks2.lastIndex || (pointer1 <= blocks1.lastIndex && blocks1[pointer1].relativeStartIndex < blocks2[pointer2].relativeStartIndex)) {
+            val deletedBlock = blocks1[pointer1]
+            println("${ deletedBlock.absoluteStartIndex + 1 }${ if (deletedBlock.length > 1) ",${ deletedBlock.absoluteStartIndex + deletedBlock.length }" else "" }" +
+                    "d" +
+                    "${ deletedBlock.relativeStartIndex + addedLinesCnt }")
+            for (i in deletedBlock.absoluteStartIndex until (deletedBlock.absoluteStartIndex + deletedBlock.length)) {
+                println("< ${file1[i]}")
+            }
+            deletedLinesCnt += blocks1[pointer1].length
+
+            pointer1++
+        } else if (pointer1 > blocks1.lastIndex || blocks2[pointer2].relativeStartIndex < blocks1[pointer1].relativeStartIndex) {
+            val addedBlock = blocks2[pointer2]
+            println("${ addedBlock.relativeStartIndex + deletedLinesCnt }" +
+                    "a" +
+                    "${ addedBlock.absoluteStartIndex + 1 }${ if (addedBlock.length > 1) ",${ addedBlock.absoluteStartIndex + addedBlock.length }" else "" }")
+            for (i in addedBlock.absoluteStartIndex until (addedBlock.absoluteStartIndex + addedBlock.length)) {
+                println("> ${file2[i]}")
+            }
+            addedLinesCnt += blocks2[pointer2].length
+
+            pointer2++
+        } else {
+            val deletedBlock = blocks1[pointer1]
+            val addedBlock = blocks2[pointer2]
+            println("${ deletedBlock.absoluteStartIndex + 1 }${ if (deletedBlock.length > 1) ",${ deletedBlock.absoluteStartIndex + deletedBlock.length }" else "" }" +
+                    "c" +
+                    "${ addedBlock.absoluteStartIndex + 1 }${ if (addedBlock.length > 1) ",${ addedBlock.absoluteStartIndex + addedBlock.length }" else "" }")
+            for (i in deletedBlock.absoluteStartIndex until (deletedBlock.absoluteStartIndex + deletedBlock.length)) {
+                println("< ${file1[i]}")
+            }
+            println("---")
+            for (i in addedBlock.absoluteStartIndex until (addedBlock.absoluteStartIndex + addedBlock.length)) {
+                println("> ${file2[i]}")
+            }
+            deletedLinesCnt += deletedBlock.length
+            addedLinesCnt += addedBlock.length
+
             pointer1++; pointer2++
         }
     }
