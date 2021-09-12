@@ -2,7 +2,8 @@ import kotlin.system.exitProcess
 import java.io.File
 import java.io.InputStream
 
-const val SIZE_LIMIT = 1024 * 1024 * 1024
+const val SIZE_LIMIT = 500 * 1024
+const val LINE_LIMIT = 10000
 
 enum class ReconstructionMarker {
     NONE, REMOVE_FROM_LCS, LEFT, UP
@@ -55,7 +56,12 @@ fun readFromFile(pathToFile: String): Array<String> {
     val inputStream: InputStream = fileObject.inputStream()
     val lineList = mutableListOf<String>()
 
-    inputStream.bufferedReader().forEachLine { lineList.add(it) }
+    inputStream.bufferedReader().forEachLine {
+        lineList.add(it)
+        if (lineList.size > LINE_LIMIT) {
+            terminateOnError("$pathToFile exceeds line limit ($LINE_LIMIT lines).")
+        }
+    }
 
     return lineList.toTypedArray()
 }
