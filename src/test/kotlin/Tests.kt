@@ -43,7 +43,8 @@ internal class Tests {
             arrayOf("a", "b", "c", "d", "e", "f", "g"),
             arrayOf("a", "b"),
             arrayOf("b", "d", "p", "q", "v", "y", "z", "a"),
-            arrayOf("#include <iostream>", "using namespace std;", "", "int main() {", "    int a, b;",
+            arrayOf(
+                "#include <iostream>", "using namespace std;", "", "int main() {", "    int a, b;",
                 "    cin >> a >> b;", "    cout << a + b << endl;", "    return 0;", "}", "    int a, b, c;",
                 "    cin >> a >> b >> c;", "    cout << a + b + c << endl;"
             )
@@ -109,6 +110,34 @@ internal class Tests {
     }
 
     @Test
+    fun produceOutputTemplateTests() {
+        val file1Values = arrayOf(
+            arrayOf("a", "b", "c", "d", "e", "f", "g", "h"),
+            arrayOf("a", "b", "c", "d"),
+            arrayOf("a", "b", "c", "d", "e", "f", "g"),
+        )
+        val file2Values = arrayOf(
+            arrayOf("b", "c", "e", "g", "h"),
+            arrayOf("e", "f", "g"),
+            arrayOf("a", "b", "p", "q", "r", "f", "g"),
+        )
+        val answers = listOf(
+            listOf(0, 1, 2, 3, 4, 5, 6, 7),
+            listOf(0, 1, 2, 3, 4, 5, 6),
+            listOf(0, 1, 2, 3, 4, 7, 8, 9, 5, 6)
+        )
+
+        for (i in file1Values.indices) {
+            val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
+            markNotCommonLines(comparisonOutputData)
+            compareTwoFiles(comparisonOutputData.comparisonData)
+
+            val outputTemplate = produceOutputTemplate(comparisonOutputData.comparisonData)
+            assertEquals(answers[i], outputTemplate.map {it.stringIndex})
+        }
+    }
+
+    @Test
     fun plainOutputTests() {
         val file1Values = arrayOf(
             arrayOf("a", "b", "c", "d", "e", "f", "g", "h"),
@@ -131,7 +160,7 @@ internal class Tests {
             markNotCommonLines(comparisonOutputData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
-            plainOutput(comparisonOutputData)
+            plainOutput(comparisonOutputData.stringsDictionary, produceOutputTemplate(comparisonOutputData.comparisonData))
             assertEquals(answers[i], stream.toString().lines())
             stream.reset()
         }
@@ -163,7 +192,7 @@ internal class Tests {
             markNotCommonLines(comparisonOutputData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
-            normalOutput(comparisonOutputData)
+            normalOutput(comparisonOutputData.stringsDictionary, produceOutputTemplate(comparisonOutputData.comparisonData))
             assertEquals(answers[i], stream.toString().lines())
             stream.reset()
         }
