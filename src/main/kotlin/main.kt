@@ -13,17 +13,20 @@ enum class LineMarker {
     NONE, COMMON, DELETED, ADDED
 }
 
+enum class BlockType {
+    DOESNT_MATTER, ADD, DELETE
+}
+
 data class ComparisonOutputData(val stringsDictionary: Array<String>, val comparisonData: ComparisonData)
 data class ComparisonData(val file1: Array<Line>, val file2: Array<Line>)
+data class OutputStyle(val commonPrefix: String, val deletedPrefix: String, val addedPrefix: String)
+
+val plusMinusStyle = OutputStyle("  ", "- ", "+ ")
+val normalStyle = OutputStyle("  ", "< ", "> ")
 
 data class Line(val stringIndex: Int, var lineMarker: LineMarker)
 
-/*
- * Тип данных, определяющий измененный блок в файле. [absoluteStartIndex] — индекс строки в файле (с 0), с которой
- * начинается измененный блок. [relativeStartIndex] — количество общих для двух файлов строк, встретившихся
- * до начала изменённого блока. [length] — длина изменённого блока в строчках.
- */
-data class EditedBlock(val absoluteStartIndex: Int, val relativeStartIndex: Int, var length: Int)
+data class OutputBlock(val templateStart: Int, val file1Start: Int, val file2Start: Int, var length: Int, val blockType: BlockType = BlockType.DOESNT_MATTER)
 
 /*
  * В случае ошибки вывести сообщение [exitMessage] и завершить программу с ненулевым кодом возврата.
@@ -87,7 +90,7 @@ fun stringsToLines(file1Strings: Array<String>, file2Strings: Array<String>): Co
     for (i in fromCollections.indices) {
         for (string in fromCollections[i]) {
             if (!stringsToIndex.containsKey(string)) {
-                stringsToIndex.set(string, freeIndex)
+                stringsToIndex[string] = freeIndex
                 stringsDictionary.add(string)
                 freeIndex++
             }
@@ -173,45 +176,74 @@ fun compareTwoFiles(comparisonData: ComparisonData) {
     }
 }
 
+fun produceOutputTemplate(comparisonData: ComparisonData): Array<Line> {
+    val file1 = comparisonData.file1
+    val file2 = comparisonData.file2
+    var pointer1 = 0; var pointer2 = 0
+    val outputTemplate = mutableListOf<Line>()
+
+    while (pointer1 < file1.size || pointer2 < file2.size) {
+        if (pointer2 >= file2.size || (pointer1 < file1.size && file1[pointer1].lineMarker != LineMarker.COMMON)) {
+            outputTemplate.add(file1[pointer1])
+            pointer1++
+        } else if (pointer1 >= file1.size || file2[pointer2].lineMarker != LineMarker.COMMON) {
+            outputTemplate.add(file2[pointer2])
+            pointer2++
+        } else {
+            outputTemplate.add(file1[pointer1])
+            pointer1++; pointer2++
+        }
+    }
+
+    return outputTemplate.toTypedArray()
+}
+
+fun printBlock(stringsDictionary: Array<String>, outputTemplate: Array<Line>, block: OutputBlock, style: OutputStyle) {
+    for (i in block.templateStart until block.templateStart + block.length) {
+        when (outputTemplate[i].lineMarker) {
+            LineMarker.COMMON -> println("${style.commonPrefix}${stringsDictionary[outputTemplate[i].stringIndex]}")
+            LineMarker.DELETED -> println("${style.deletedPrefix}${stringsDictionary[outputTemplate[i].stringIndex]}")
+            LineMarker.ADDED -> println("${style.addedPrefix}${stringsDictionary[outputTemplate[i].stringIndex]}")
+        }
+    }
+}
+
 /*
  * Выводит объединение двух файлов [file1] и [file2], показывающее удаление строки минусом в начале, а добавление — плюсом.
  * Общие для двух файлов линии отмечены true в [linesMarkers].
  */
-fun plainOutput(comparisonOutputData: ComparisonOutputData) {
-    val stringsDictionary = comparisonOutputData.stringsDictionary
-    val file1 = comparisonOutputData.comparisonData.file1
-    val file2 = comparisonOutputData.comparisonData.file2
-    var pointer1 = 0; var pointer2 = 0
-
-    while (pointer1 < file1.size || pointer2 < file2.size) {
-        if (pointer2 >= file2.size || (pointer1 < file1.size && file1[pointer1].lineMarker != LineMarker.COMMON)) {
-            println("- ${stringsDictionary[file1[pointer1].stringIndex]}")
-            pointer1++
-        } else if (pointer1 >= file1.size || file2[pointer2].lineMarker != LineMarker.COMMON) {
-            println("+ ${stringsDictionary[file2[pointer2].stringIndex]}")
-            pointer2++
-        } else {
-            println("  ${stringsDictionary[file1[pointer1].stringIndex]}")
-            pointer1++; pointer2++
-        }
-    }
+fun plainOutput(stringsDictionary: Array<String>, outputTemplate: Array<Line>) {
+    printBlock(stringsDictionary, outputTemplate, OutputBlock(0, 0, 0, outputTemplate.size), plusMinusStyle)
 }
 
 /*
  * По отметкам для каждой строки общая она для двух файлов или нет [linesMarkers] формирует список изменённых блоков
  * с «координатами» (в строках, относительно начала файла) изменений.
  */
-fun getEditedBlocks(file: Array<Line>): List<EditedBlock> {
-    val blocks = mutableListOf<EditedBlock>()
-    var commonLinesCounter = 0
+fun getNormalBlocks(outputTemplate: Array<Line>): List<OutputBlock> {
+    val blocks = mutableListOf<OutputBlock>()
+    var commonLinesCnt = 0
+    var deletedLinesCnt = 0
+    var addedLinesCnt = 0
 
-    for (i in file.indices) {
-        if (file[i].lineMarker == LineMarker.COMMON) {
-            ++commonLinesCounter
-        } else if (i == 0 || file[i - 1].lineMarker == LineMarker.COMMON) {
-            blocks.add(blocks.size, EditedBlock(i, commonLinesCounter, 1))
+    for (i in outputTemplate.indices) {
+        if (outputTemplate[i].lineMarker == LineMarker.COMMON) {
+            commonLinesCnt++
         } else {
-            blocks[blocks.lastIndex].length++
+            if (i == 0 || outputTemplate[i - 1].lineMarker != outputTemplate[i].lineMarker) {
+                when (outputTemplate[i].lineMarker) {
+                    LineMarker.DELETED -> blocks.add(blocks.size, OutputBlock(i, commonLinesCnt + deletedLinesCnt,
+                        commonLinesCnt + addedLinesCnt, 0, BlockType.DELETE))
+                    LineMarker.ADDED -> blocks.add(blocks.size, OutputBlock(i, commonLinesCnt + deletedLinesCnt,
+                        commonLinesCnt + addedLinesCnt, 0, BlockType.ADD))
+                }
+            }
+
+            blocks.last().length++
+            when (outputTemplate[i].lineMarker) {
+                LineMarker.DELETED -> deletedLinesCnt++
+                LineMarker.ADDED -> addedLinesCnt++
+            }
         }
     }
 
@@ -228,55 +260,35 @@ fun getEditedBlocks(file: Array<Line>): List<EditedBlock> {
  * если бы их не удалили.
  * Общие для двух файлов линии отмечены true в [linesMarkers].
  */
-fun normalOutput(comparisonOutputData: ComparisonOutputData) {
-    val file1 = comparisonOutputData.comparisonData.file1
-    val file2 = comparisonOutputData.comparisonData.file2
-    val stringsDictionary = comparisonOutputData.stringsDictionary
-    val blocks1 = getEditedBlocks(file1)
-    val blocks2 = getEditedBlocks(file2)
+fun normalOutput(stringsDictionary: Array<String>, outputTemplate: Array<Line>) {
+    val blocks = getNormalBlocks(outputTemplate)
+    var skipThisBlock = false
 
-    var pointer1 = 0; var pointer2 = 0
-    var deletedLinesCnt = 0; var addedLinesCnt = 0
-    while (pointer1 <= blocks1.lastIndex || pointer2 <= blocks2.lastIndex) {
-        if (pointer2 > blocks2.lastIndex || (pointer1 <= blocks1.lastIndex && blocks1[pointer1].relativeStartIndex < blocks2[pointer2].relativeStartIndex)) {
-            val deletedBlock = blocks1[pointer1]
-            println("${ deletedBlock.absoluteStartIndex + 1 }${ if (deletedBlock.length > 1) ",${ deletedBlock.absoluteStartIndex + deletedBlock.length }" else "" }" +
-                    "d" +
-                    "${ deletedBlock.relativeStartIndex + addedLinesCnt }")
-            for (i in deletedBlock.absoluteStartIndex until (deletedBlock.absoluteStartIndex + deletedBlock.length)) {
-                println("< ${stringsDictionary[file1[i].stringIndex]}")
-            }
-            deletedLinesCnt += blocks1[pointer1].length
+    for (i in blocks.indices) {
+        if (skipThisBlock) {
+            skipThisBlock = false
+            continue
+        }
 
-            pointer1++
-        } else if (pointer1 > blocks1.lastIndex || blocks2[pointer2].relativeStartIndex < blocks1[pointer1].relativeStartIndex) {
-            val addedBlock = blocks2[pointer2]
-            println("${ addedBlock.relativeStartIndex + deletedLinesCnt }" +
-                    "a" +
-                    "${ addedBlock.absoluteStartIndex + 1 }${ if (addedBlock.length > 1) ",${ addedBlock.absoluteStartIndex + addedBlock.length }" else "" }")
-            for (i in addedBlock.absoluteStartIndex until (addedBlock.absoluteStartIndex + addedBlock.length)) {
-                println("> ${stringsDictionary[file2[i].stringIndex]}")
-            }
-            addedLinesCnt += blocks2[pointer2].length
-
-            pointer2++
-        } else {
-            val deletedBlock = blocks1[pointer1]
-            val addedBlock = blocks2[pointer2]
-            println("${ deletedBlock.absoluteStartIndex + 1 }${ if (deletedBlock.length > 1) ",${ deletedBlock.absoluteStartIndex + deletedBlock.length }" else "" }" +
+        if (i != blocks.lastIndex && blocks[i].blockType == BlockType.DELETE && blocks[i + 1].blockType == BlockType.ADD &&
+                blocks[i].templateStart + blocks[i].length == blocks[i + 1].templateStart) {
+            println("${blocks[i].file1Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file1Start + blocks[i].length}"}" +
                     "c" +
-                    "${ addedBlock.absoluteStartIndex + 1 }${ if (addedBlock.length > 1) ",${ addedBlock.absoluteStartIndex + addedBlock.length }" else "" }")
-            for (i in deletedBlock.absoluteStartIndex until (deletedBlock.absoluteStartIndex + deletedBlock.length)) {
-                println("< ${stringsDictionary[file1[i].stringIndex]}")
-            }
+                    "${blocks[i + 1].file2Start + 1}${if (blocks[i + 1].length == 1) "" else ",${blocks[i + 1].file2Start + blocks[i + 1].length}"}")
+            printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
             println("---")
-            for (i in addedBlock.absoluteStartIndex until (addedBlock.absoluteStartIndex + addedBlock.length)) {
-                println("> ${stringsDictionary[file2[i].stringIndex]}")
-            }
-            deletedLinesCnt += deletedBlock.length
-            addedLinesCnt += addedBlock.length
-
-            pointer1++; pointer2++
+            printBlock(stringsDictionary, outputTemplate, blocks[i + 1], normalStyle)
+            skipThisBlock = true
+        } else if (blocks[i].blockType == BlockType.DELETE) {
+            println("${blocks[i].file1Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file1Start + blocks[i].length}"}" +
+                    "d" +
+                    "${blocks[i].file2Start}")
+            printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
+        } else {
+            println("${blocks[i].file1Start}" +
+                    "a" +
+                    "${blocks[i].file2Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file2Start + blocks[i].length}"}")
+            printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
         }
     }
 }
@@ -290,5 +302,6 @@ fun main(args: Array<String>) {
     markNotCommonLines(comparisonOutputData)
     compareTwoFiles(comparisonOutputData.comparisonData)
 
-    normalOutput(comparisonOutputData)
+    val outputTemplate = produceOutputTemplate(comparisonOutputData.comparisonData)
+    normalOutput(comparisonOutputData.stringsDictionary, outputTemplate)
 }
