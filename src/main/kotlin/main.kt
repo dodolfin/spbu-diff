@@ -9,6 +9,15 @@ enum class ReconstructionMarker {
     NONE, REMOVE_FROM_LCS, LEFT, UP
 }
 
+enum class LineMarker {
+    NONE, COMMON, DELETED, ADDED
+}
+
+data class ComparisonOutputData(val stringsDictionary: Array<String>, val comparisonData: ComparisonData)
+data class ComparisonData(val file1: Array<Line>, val file2: Array<Line>)
+
+data class Line(val stringIndex: Int, var lineMarker: LineMarker)
+
 /*
  * Тип данных, определяющий измененный блок в файле. [absoluteStartIndex] — индекс строки в файле (с 0), с которой
  * начинается измененный блок. [relativeStartIndex] — количество общих для двух файлов строк, встретившихся
@@ -66,12 +75,59 @@ fun readFromFile(pathToFile: String): Array<String> {
     return lineList.toTypedArray()
 }
 
+fun stringsToLines(file1Strings: Array<String>, file2Strings: Array<String>): ComparisonOutputData {
+    val stringsToIndex = mutableMapOf<String, Int>()
+    var freeIndex = 0
+    val stringsDictionary = mutableListOf<String>()
+
+    val fromCollections = arrayOf(file1Strings, file2Strings)
+    val file1Indices = mutableListOf<Line>(); val file2Indices = mutableListOf<Line>()
+    val toCollections = arrayOf(file1Indices, file2Indices)
+
+    for (i in fromCollections.indices) {
+        for (string in fromCollections[i]) {
+            if (!stringsToIndex.containsKey(string)) {
+                stringsToIndex.set(string, freeIndex)
+                stringsDictionary.add(string)
+                freeIndex++
+            }
+            toCollections[i].add(toCollections[i].size, Line(stringsToIndex.getOrDefault(string, 0), LineMarker.NONE))
+        }
+    }
+
+    return ComparisonOutputData(stringsDictionary.toTypedArray(),
+        ComparisonData(file1Indices.toTypedArray(), file2Indices.toTypedArray()))
+}
+
+fun markNotCommonLines(comparisonOutputData: ComparisonOutputData) {
+    val indicesCount = Array(2) { Array(comparisonOutputData.stringsDictionary.size) {0} }
+    val fromCollections = arrayOf(comparisonOutputData.comparisonData.file1, comparisonOutputData.comparisonData.file2)
+
+    for (i in fromCollections.indices) {
+        fromCollections[i].forEach {
+            indicesCount[i][it.stringIndex]++
+        }
+    }
+
+    for (i in fromCollections.indices) {
+        fromCollections[i].forEach {
+            if (indicesCount[1 - i][it.stringIndex] == 0) {
+                it.lineMarker = if (i == 0) LineMarker.DELETED else LineMarker.ADDED
+            }
+        }
+    }
+}
+
 /*
  * Сравнивает два файла [file1] и [file2], представленные в виде массива строк,
  * и возвращает ответ в следующем формате: solution с двумя массивами со значениями true или false,
  * которые показывают, входит ли данная строка в НОП или нет.
  */
-fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boolean>> {
+fun compareTwoFiles(comparisonData: ComparisonData) {
+    // Перед тем как сравнивать строчки, оставим только те, для которых ещё неизвестно их отношение к LCS
+    val file1 = comparisonData.file1.filter { it.lineMarker == LineMarker.NONE }
+    val file2 = comparisonData.file2.filter { it.lineMarker == LineMarker.NONE }
+
     /* LCS означает Longest Common Subsequence — наибольшую общую подпоследовательность
      * В массиве LCSMemoization хранятся значения НОП для всех возможных префиксов двух файлов,
      * а в массиве LCSReconstruction хранятся данные для восстановления.
@@ -101,39 +157,41 @@ fun compareTwoFiles(file1: Array<String>, file2: Array<String>): Array<Array<Boo
     }
 
     // Восстановление ответа
-    val solution = arrayOf(Array(file1.size) { false }, Array(file2.size) { false })
+    file1.forEach { it.lineMarker = LineMarker.DELETED }
+    file2.forEach { it.lineMarker = LineMarker.ADDED }
     var prefix1 = file1.size; var prefix2 = file2.size
     while (prefix1 != 0 && prefix2 != 0) {
         when (LCSReconstruction[prefix1][prefix2]) {
             ReconstructionMarker.REMOVE_FROM_LCS -> {
-                solution[0][prefix1 - 1] = true
-                solution[1][prefix2 - 1] = true
+                file1[prefix1 - 1].lineMarker = LineMarker.COMMON
+                file2[prefix2 - 1].lineMarker = LineMarker.COMMON
                 prefix1--; prefix2--
             }
             ReconstructionMarker.LEFT -> prefix1--
             ReconstructionMarker.UP -> prefix2--
         }
     }
-
-    return solution
 }
 
 /*
  * Выводит объединение двух файлов [file1] и [file2], показывающее удаление строки минусом в начале, а добавление — плюсом.
  * Общие для двух файлов линии отмечены true в [linesMarkers].
  */
-fun plainOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<Array<Boolean>>) {
+fun plainOutput(comparisonOutputData: ComparisonOutputData) {
+    val stringsDictionary = comparisonOutputData.stringsDictionary
+    val file1 = comparisonOutputData.comparisonData.file1
+    val file2 = comparisonOutputData.comparisonData.file2
     var pointer1 = 0; var pointer2 = 0
 
     while (pointer1 < file1.size || pointer2 < file2.size) {
-        if (pointer2 >= file2.size || (pointer1 < file1.size && !linesMarkers[0][pointer1])) {
-            println("- ${file1[pointer1]}")
+        if (pointer2 >= file2.size || (pointer1 < file1.size && file1[pointer1].lineMarker != LineMarker.COMMON)) {
+            println("- ${stringsDictionary[file1[pointer1].stringIndex]}")
             pointer1++
-        } else if (pointer1 >= file1.size || !linesMarkers[1][pointer2]) {
-            println("+ ${file2[pointer2]}")
+        } else if (pointer1 >= file1.size || file2[pointer2].lineMarker != LineMarker.COMMON) {
+            println("+ ${stringsDictionary[file2[pointer2].stringIndex]}")
             pointer2++
         } else {
-            println("  ${file1[pointer1]}")
+            println("  ${stringsDictionary[file1[pointer1].stringIndex]}")
             pointer1++; pointer2++
         }
     }
@@ -143,14 +201,14 @@ fun plainOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<
  * По отметкам для каждой строки общая она для двух файлов или нет [linesMarkers] формирует список изменённых блоков
  * с «координатами» (в строках, относительно начала файла) изменений.
  */
-fun getEditedBlocks(linesMarkers: Array<Boolean>): List<EditedBlock> {
+fun getEditedBlocks(file: Array<Line>): List<EditedBlock> {
     val blocks = mutableListOf<EditedBlock>()
     var commonLinesCounter = 0
 
-    for (i in linesMarkers.indices) {
-        if (linesMarkers[i]) {
+    for (i in file.indices) {
+        if (file[i].lineMarker == LineMarker.COMMON) {
             ++commonLinesCounter
-        } else if (i == 0 || linesMarkers[i - 1]) {
+        } else if (i == 0 || file[i - 1].lineMarker == LineMarker.COMMON) {
             blocks.add(blocks.size, EditedBlock(i, commonLinesCounter, 1))
         } else {
             blocks[blocks.lastIndex].length++
@@ -170,9 +228,12 @@ fun getEditedBlocks(linesMarkers: Array<Boolean>): List<EditedBlock> {
  * если бы их не удалили.
  * Общие для двух файлов линии отмечены true в [linesMarkers].
  */
-fun normalOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array<Array<Boolean>>) {
-    val blocks1 = getEditedBlocks(linesMarkers[0])
-    val blocks2 = getEditedBlocks(linesMarkers[1])
+fun normalOutput(comparisonOutputData: ComparisonOutputData) {
+    val file1 = comparisonOutputData.comparisonData.file1
+    val file2 = comparisonOutputData.comparisonData.file2
+    val stringsDictionary = comparisonOutputData.stringsDictionary
+    val blocks1 = getEditedBlocks(file1)
+    val blocks2 = getEditedBlocks(file2)
 
     var pointer1 = 0; var pointer2 = 0
     var deletedLinesCnt = 0; var addedLinesCnt = 0
@@ -183,7 +244,7 @@ fun normalOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array
                     "d" +
                     "${ deletedBlock.relativeStartIndex + addedLinesCnt }")
             for (i in deletedBlock.absoluteStartIndex until (deletedBlock.absoluteStartIndex + deletedBlock.length)) {
-                println("< ${file1[i]}")
+                println("< ${stringsDictionary[file1[i].stringIndex]}")
             }
             deletedLinesCnt += blocks1[pointer1].length
 
@@ -194,7 +255,7 @@ fun normalOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array
                     "a" +
                     "${ addedBlock.absoluteStartIndex + 1 }${ if (addedBlock.length > 1) ",${ addedBlock.absoluteStartIndex + addedBlock.length }" else "" }")
             for (i in addedBlock.absoluteStartIndex until (addedBlock.absoluteStartIndex + addedBlock.length)) {
-                println("> ${file2[i]}")
+                println("> ${stringsDictionary[file2[i].stringIndex]}")
             }
             addedLinesCnt += blocks2[pointer2].length
 
@@ -206,11 +267,11 @@ fun normalOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array
                     "c" +
                     "${ addedBlock.absoluteStartIndex + 1 }${ if (addedBlock.length > 1) ",${ addedBlock.absoluteStartIndex + addedBlock.length }" else "" }")
             for (i in deletedBlock.absoluteStartIndex until (deletedBlock.absoluteStartIndex + deletedBlock.length)) {
-                println("< ${file1[i]}")
+                println("< ${stringsDictionary[file1[i].stringIndex]}")
             }
             println("---")
             for (i in addedBlock.absoluteStartIndex until (addedBlock.absoluteStartIndex + addedBlock.length)) {
-                println("> ${file2[i]}")
+                println("> ${stringsDictionary[file2[i].stringIndex]}")
             }
             deletedLinesCnt += deletedBlock.length
             addedLinesCnt += addedBlock.length
@@ -223,9 +284,11 @@ fun normalOutput(file1: Array<String>, file2: Array<String>, linesMarkers: Array
 fun main(args: Array<String>) {
     checkArguments(args)
 
-    val file1 = readFromFile(args[args.size - 2])
-    val file2 = readFromFile(args[args.size - 1])
+    val file1Strings = readFromFile(args[args.size - 2])
+    val file2Strings = readFromFile(args[args.size - 1])
+    val comparisonOutputData = stringsToLines(file1Strings, file2Strings)
+    markNotCommonLines(comparisonOutputData)
+    compareTwoFiles(comparisonOutputData.comparisonData)
 
-    val linesMarkers = compareTwoFiles(file1, file2)
-    plainOutput(file1, file2, linesMarkers)
+    normalOutput(comparisonOutputData)
 }
