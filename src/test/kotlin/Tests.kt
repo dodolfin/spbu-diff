@@ -1,5 +1,6 @@
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import java.io.File
 import kotlin.test.*
 
 internal class Tests {
@@ -194,6 +195,41 @@ internal class Tests {
 
             normalOutput(comparisonOutputData.stringsDictionary, produceOutputTemplate(comparisonOutputData.comparisonData))
             assertEquals(answers[i], stream.toString().lines())
+            stream.reset()
+        }
+    }
+
+    @Test
+    fun unifiedOutputTests() {
+        val file1Values = arrayOf(
+            arrayOf("a", "b", "c", "d", "e", "f", "g", "h"),
+            arrayOf("d", "e", "f"),
+            arrayOf("a", "b", "c", "d"),
+            arrayOf("a", "b", "c", "d", "e", "f", "g"),
+        )
+        val file2Values = arrayOf(
+            arrayOf("b", "c", "e", "g", "h"),
+            arrayOf("a", "b", "c", "d", "e", "f"),
+            arrayOf("e", "f", "g"),
+            arrayOf("a", "b", "p", "q", "r", "f", "g"),
+        )
+        val answers = arrayOf(
+            "@@ -1,7 +1,4 @@\n-a\n b\n c\n-d\n e\n-f\n g\n".lines(),
+            "@@ -1 +1,4 @@\n+a\n+b\n+c\n d\n".lines(),
+            "@@ -1,4 +1,3 @@\n-a\n-b\n-c\n-d\n+e\n+f\n+g\n".lines(),
+            "@@ -2,5 +2,5 @@\n b\n-c\n-d\n-e\n+p\n+q\n+r\n f\n".lines(),
+        )
+
+        for (i in file1Values.indices) {
+            val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
+            markNotCommonLines(comparisonOutputData)
+            compareTwoFiles(comparisonOutputData.comparisonData)
+
+            val fakeFile1 = File("src/test/kotlin/file01.1.txt")
+            val fakeFile2 = File("src/test/kotlin/file01.2.txt")
+
+            unifiedOutput(comparisonOutputData.stringsDictionary, produceOutputTemplate(comparisonOutputData.comparisonData), fakeFile1, fakeFile2, 1)
+            assertEquals(answers[i], stream.toString().lines().drop(2))
             stream.reset()
         }
     }
