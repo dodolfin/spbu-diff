@@ -1,6 +1,8 @@
 import kotlin.system.exitProcess
+import kotlin.math.*
 import java.io.File
 import java.io.InputStream
+import java.time.*
 
 const val SIZE_LIMIT = 500 * 1024
 const val LINE_LIMIT = 10000
@@ -22,11 +24,13 @@ data class ComparisonData(val file1: Array<Line>, val file2: Array<Line>)
 data class OutputStyle(val commonPrefix: String, val deletedPrefix: String, val addedPrefix: String)
 
 val plusMinusStyle = OutputStyle("  ", "- ", "+ ")
+val unifiedStyle = OutputStyle(" ", "-", "+")
 val normalStyle = OutputStyle("  ", "< ", "> ")
 
 data class Line(val stringIndex: Int, var lineMarker: LineMarker)
 
-data class OutputBlock(val templateStart: Int, val file1Start: Int, val file2Start: Int, var length: Int, val blockType: BlockType = BlockType.DOESNT_MATTER)
+data class OutputBlock(val templateStart: Int, var file1Start: Int, var file2Start: Int, var length: Int, val blockType: BlockType = BlockType.DOESNT_MATTER)
+data class UnifiedInternalBlock(var leftBound: Int = -1, var rightBound: Int = -1)
 
 /*
  * В случае ошибки вывести сообщение [exitMessage] и завершить программу с ненулевым кодом возврата.
@@ -45,33 +49,37 @@ fun checkArguments(args: Array<String>) {
     }
 }
 
+fun openFile(pathToFile: String): File {
+    val fileObject = File(pathToFile)
+
+    if (!fileObject.exists()) {
+        terminateOnError("${fileObject.name} does not exist.")
+    }
+    if (!fileObject.isFile) {
+        terminateOnError("${fileObject.name} is not a normal file.")
+    }
+    if (!fileObject.canRead()) {
+        terminateOnError("${fileObject.name} is not readable.")
+    }
+    if (fileObject.length() > SIZE_LIMIT) {
+        terminateOnError("${fileObject.name} exceeds size limit ($SIZE_LIMIT bytes).")
+    }
+
+    return fileObject
+}
+
 /*
  * Считать содержимое файла, находящегося по адресу [pathToFile]. Пока что эта функция производит и проверки,
  * связанные с файлом (существование, право доступа к нему и т. д.)
  */
-fun readFromFile(pathToFile: String): Array<String> {
-    val fileObject = File(pathToFile)
-
-    if (!fileObject.exists()) {
-        terminateOnError("$pathToFile does not exist.")
-    }
-    if (!fileObject.isFile()) {
-        terminateOnError("$pathToFile is not a normal file.")
-    }
-    if (!fileObject.canRead()) {
-        terminateOnError("$pathToFile is not readable.")
-    }
-    if (fileObject.length() > SIZE_LIMIT) {
-        terminateOnError("$pathToFile exceeds size limit ($SIZE_LIMIT bytes).")
-    }
-
+fun readFromFile(fileObject: File): Array<String> {
     val inputStream: InputStream = fileObject.inputStream()
     val lineList = mutableListOf<String>()
 
     inputStream.bufferedReader().forEachLine {
         lineList.add(it)
         if (lineList.size > LINE_LIMIT) {
-            terminateOnError("$pathToFile exceeds line limit ($LINE_LIMIT lines).")
+            terminateOnError("${fileObject.name} exceeds line limit ($LINE_LIMIT lines).")
         }
     }
 
@@ -293,15 +301,105 @@ fun normalOutput(stringsDictionary: Array<String>, outputTemplate: Array<Line>) 
     }
 }
 
+fun getUnifiedBlocks(outputTemplate: Array<Line>, contextLines: Int): List<OutputBlock> {
+    val blocksAllBounds = mutableListOf<Int>()
+
+    for (i in outputTemplate.indices) {
+        if ((i == 0 && outputTemplate[i].lineMarker != LineMarker.COMMON) ||
+            (i != 0 && outputTemplate[i - 1].lineMarker == LineMarker.COMMON && outputTemplate[i].lineMarker != LineMarker.COMMON)) {
+            blocksAllBounds.add(max(0, i - contextLines))
+        } else if (i != 0 && outputTemplate[i - 1].lineMarker != LineMarker.COMMON && outputTemplate[i].lineMarker == LineMarker.COMMON) {
+            blocksAllBounds.add(min(outputTemplate.lastIndex, i - 1 + contextLines))
+        }
+    }
+    if (outputTemplate.last().lineMarker != LineMarker.COMMON) {
+        blocksAllBounds.add(outputTemplate.lastIndex)
+    }
+
+    val blocksUnifiedBounds = mutableListOf<UnifiedInternalBlock>()
+    blocksUnifiedBounds.add(UnifiedInternalBlock(blocksAllBounds[0]))
+    for (i in 1 until blocksAllBounds.lastIndex step 2) {
+        if (blocksAllBounds[i + 1] - blocksAllBounds[i] > 1) {
+            blocksUnifiedBounds.last().rightBound = blocksAllBounds[i]
+            blocksUnifiedBounds.add(UnifiedInternalBlock(blocksAllBounds[i + 1]))
+        }
+    }
+    blocksUnifiedBounds.last().rightBound = blocksAllBounds.last()
+
+    val blocksResult = mutableListOf<OutputBlock>()
+    var commonLinesCnt = 0
+    var deletedLinesCnt = 0
+    var addedLinesCnt = 0
+    var blockPointer = 0
+
+    for (i in outputTemplate.indices) {
+        if (blockPointer <= blocksUnifiedBounds.lastIndex && i in blocksUnifiedBounds[blockPointer].leftBound..blocksUnifiedBounds[blockPointer].rightBound) {
+            if (i == blocksUnifiedBounds[blockPointer].leftBound) {
+                val file1Start = if (i == 0 && outputTemplate[i].lineMarker == LineMarker.ADDED) -1 else commonLinesCnt + deletedLinesCnt
+                val file2Start = if (i == 0 && outputTemplate[i].lineMarker == LineMarker.DELETED) -1 else commonLinesCnt + addedLinesCnt
+                blocksResult.add(OutputBlock(i, file1Start, file2Start, 0))
+            }
+
+            blocksResult.last().length++
+            if (blocksResult.last().file1Start == -1 && outputTemplate[i].lineMarker != LineMarker.ADDED) {
+                blocksResult.last().file1Start = 0
+            }
+            if (blocksResult.last().file2Start == -1 && outputTemplate[i].lineMarker != LineMarker.DELETED) {
+                blocksResult.last().file2Start = 0
+            }
+
+            if (i == blocksUnifiedBounds[blockPointer].rightBound) {
+                blockPointer++
+            }
+        }
+
+        when (outputTemplate[i].lineMarker) {
+            LineMarker.COMMON -> commonLinesCnt++
+            LineMarker.ADDED -> addedLinesCnt++
+            LineMarker.DELETED -> deletedLinesCnt++
+        }
+    }
+
+    return blocksResult
+}
+
+fun convertEpochToReadableTime(epochValue: Long): OffsetDateTime {
+    return OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochValue), ZoneId.systemDefault())
+}
+
+fun getRelativeBlockLength(block: OutputBlock, outputTemplate: Array<Line>, ignoredLineMarker: LineMarker): Int {
+    val blockRange = block.templateStart until block.templateStart + block.length
+    return block.length - outputTemplate.slice(blockRange).count {it.lineMarker == ignoredLineMarker}
+}
+
+fun unifiedOutput(stringsDictionary: Array<String>, outputTemplate: Array<Line>, file1Object: File, file2Object: File, contextLines: Int = 3) {
+    val blocks = getUnifiedBlocks(outputTemplate, contextLines)
+
+    println("--- ${file1Object.name} ${convertEpochToReadableTime(file1Object.lastModified())}")
+    println("+++ ${file2Object.name} ${convertEpochToReadableTime(file2Object.lastModified())}")
+    for (block in blocks) {
+        val file1LinesCnt = getRelativeBlockLength(block, outputTemplate, LineMarker.ADDED)
+        val file2LinesCnt = getRelativeBlockLength(block, outputTemplate, LineMarker.DELETED)
+        println(
+            "@@ -${block.file1Start + 1}${if (file1LinesCnt == 1) "" else ",$file1LinesCnt"} " +
+                    "+${block.file2Start + 1}${if (file2LinesCnt == 1) "" else ",$file2LinesCnt"} @@"
+        )
+        printBlock(stringsDictionary, outputTemplate, block, unifiedStyle)
+    }
+}
+
 fun main(args: Array<String>) {
     checkArguments(args)
 
-    val file1Strings = readFromFile(args[args.size - 2])
-    val file2Strings = readFromFile(args[args.size - 1])
+    val file1Object = openFile(args[args.size - 2])
+    val file2Object = openFile(args[args.size - 1])
+
+    val file1Strings = readFromFile(file1Object)
+    val file2Strings = readFromFile(file2Object)
     val comparisonOutputData = stringsToLines(file1Strings, file2Strings)
     markNotCommonLines(comparisonOutputData)
     compareTwoFiles(comparisonOutputData.comparisonData)
 
     val outputTemplate = produceOutputTemplate(comparisonOutputData.comparisonData)
-    normalOutput(comparisonOutputData.stringsDictionary, outputTemplate)
+    unifiedOutput(comparisonOutputData.stringsDictionary, outputTemplate, file1Object, file2Object)
 }
