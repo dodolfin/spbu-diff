@@ -53,15 +53,6 @@ fun showHelpAndTerminate() {
     exitProcess(0)
 }
 
-/*
- * Проверяет, что в программу передано хотя бы 2 аргумента [args] (два файла для сравнения).
- */
-fun checkArguments(args: Array<String>) {
-    if (args.size < 2) {
-        terminateOnError("Not enough arguments (required 2 paths to files; got ${ args.size }).")
-    }
-}
-
 fun splitIntoArguments(args: Array<String>): List<Argument> {
     val parsedArgs = mutableMapOf<ArgumentType, Int>()
 
@@ -131,6 +122,10 @@ fun parseArguments(args: Array<String>): List<Argument> {
 
     if (Argument(ArgumentType.HELP) in parsedArgs) {
         showHelpAndTerminate()
+    }
+
+    if (args.size < 2) {
+        terminateOnError("Not enough arguments (required 2 paths to files; got ${ args.size }).")
     }
 
     if (parsedArgs.size > 1) {
@@ -495,7 +490,6 @@ fun output(comparisonOutputData: ComparisonOutputData, file1Object: File, file2O
 
 fun main(args: Array<String>) {
     val parsedArgs = parseArguments(args)
-    checkArguments(args)
 
     val file1Object = openFile(args[args.size - 2])
     val file2Object = openFile(args[args.size - 1])
