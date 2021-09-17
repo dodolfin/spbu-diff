@@ -1,11 +1,16 @@
 import kotlin.system.exitProcess
 import kotlin.math.*
+import kotlin.text.Regex
 import java.io.File
 import java.io.InputStream
 import java.time.*
 
 const val SIZE_LIMIT = 500 * 1024
 const val LINE_LIMIT = 10000
+
+enum class ArgumentType {
+    UNIFIED, NORMAL, PLAIN, HELP
+}
 
 enum class ReconstructionMarker {
     NONE, REMOVE_FROM_LCS, LEFT, UP
@@ -19,9 +24,11 @@ enum class BlockType {
     DOESNT_MATTER, ADD, DELETE
 }
 
-data class ComparisonOutputData(val stringsDictionary: Array<String>, val comparisonData: ComparisonData)
-data class ComparisonData(val file1: Array<Line>, val file2: Array<Line>)
+data class Argument(val argumentType: ArgumentType, val argumentValue: Int = 0)
 data class OutputStyle(val commonPrefix: String, val deletedPrefix: String, val addedPrefix: String)
+
+data class ComparisonOutputData(val stringsDictionary: Array<String>, var outputTemplate: Array<Line>, val comparisonData: ComparisonData)
+data class ComparisonData(val file1: Array<Line>, val file2: Array<Line>)
 
 val plusMinusStyle = OutputStyle("  ", "- ", "+ ")
 val unifiedStyle = OutputStyle(" ", "-", "+")
@@ -37,7 +44,13 @@ data class UnifiedInternalBlock(var leftBound: Int = -1, var rightBound: Int = -
  */
 fun terminateOnError(exitMessage: String) {
     println(exitMessage)
+    println("Use README.md or --help option for more information.")
     exitProcess(1)
+}
+
+fun showHelpAndTerminate() {
+    println("HELP: TODO()")
+    exitProcess(0)
 }
 
 /*
@@ -47,6 +60,84 @@ fun checkArguments(args: Array<String>) {
     if (args.size < 2) {
         terminateOnError("Not enough arguments (required 2 paths to files; got ${ args.size }).")
     }
+}
+
+fun splitIntoArguments(args: Array<String>): List<Argument> {
+    val parsedArgs = mutableMapOf<ArgumentType, Int>()
+
+    args.take(if (args.size >= 2) args.size - 2 else args.size).forEach { arg ->
+        val shortFormArgRegex = Regex("-([a-zA-z][0-9]*)+")
+        val fullFormArgRegex = Regex("--[a-z]+(=[0-9]+)?")
+
+        if (!shortFormArgRegex.matches(arg) && !fullFormArgRegex.matches(arg)) {
+            terminateOnError("${arg} is invalid argument.")
+        }
+
+        val isShortForm = shortFormArgRegex.matches(arg)
+        val searchRegex: Regex
+        if (isShortForm) {
+            searchRegex = Regex("([a-zA-Z])([0-9]*)")
+        } else {
+            searchRegex = Regex("([a-z]+)(=[0-9]+)?")
+        }
+
+        searchRegex.findAll(arg).forEach {
+            var (flag, value) = it.destructured
+
+            if (value.length > 9) {
+                terminateOnError("$flag value $value is too big.")
+            }
+            if (value.isNotEmpty() && !isShortForm) {
+                value = value.drop(1)
+            }
+            var valueToInt = if (value.isNotEmpty()) value.toInt() else 0
+
+            if (isShortForm) {
+                parsedArgs[when (flag) {
+                    "p" -> ArgumentType.PLAIN
+                    "n" -> ArgumentType.NORMAL
+                    "u" -> {
+                        valueToInt = if (value.isNotEmpty()) valueToInt else 3
+                        ArgumentType.UNIFIED
+                    }
+                    else -> {
+                        terminateOnError("There is no $flag argument.")
+                        ArgumentType.HELP
+                    }
+                }] = valueToInt
+            } else {
+                parsedArgs[when (flag) {
+                    "help" -> ArgumentType.HELP
+                    "plain" -> ArgumentType.PLAIN
+                    "normal" -> ArgumentType.NORMAL
+                    "unified" -> {
+                        valueToInt = if (value.isNotEmpty()) valueToInt else 3
+                        ArgumentType.UNIFIED
+                    }
+                    else -> {
+                        terminateOnError("There is no $flag argument.")
+                        ArgumentType.HELP
+                    }
+                }] = valueToInt
+            }
+        }
+    }
+
+    return parsedArgs.toList().map { Argument(it.first, it.second) }
+}
+
+fun parseArguments(args: Array<String>): List<Argument> {
+    val parsedArgs = splitIntoArguments(args)
+
+    if (Argument(ArgumentType.HELP) in parsedArgs) {
+        showHelpAndTerminate()
+    }
+
+    if (parsedArgs.size > 1) {
+        terminateOnError("Conflicting output modes.")
+    }
+
+    return parsedArgs
 }
 
 fun openFile(pathToFile: String): File {
@@ -106,7 +197,7 @@ fun stringsToLines(file1Strings: Array<String>, file2Strings: Array<String>): Co
         }
     }
 
-    return ComparisonOutputData(stringsDictionary.toTypedArray(),
+    return ComparisonOutputData(stringsDictionary.toTypedArray(), Array(0) {Line(0, LineMarker.NONE)},
         ComparisonData(file1Indices.toTypedArray(), file2Indices.toTypedArray()))
 }
 
@@ -184,9 +275,9 @@ fun compareTwoFiles(comparisonData: ComparisonData) {
     }
 }
 
-fun produceOutputTemplate(comparisonData: ComparisonData): Array<Line> {
-    val file1 = comparisonData.file1
-    val file2 = comparisonData.file2
+fun produceOutputTemplate(comparisonOutputData: ComparisonOutputData) {
+    val file1 = comparisonOutputData.comparisonData.file1
+    val file2 = comparisonOutputData.comparisonData.file2
     var pointer1 = 0; var pointer2 = 0
     val outputTemplate = mutableListOf<Line>()
 
@@ -203,15 +294,15 @@ fun produceOutputTemplate(comparisonData: ComparisonData): Array<Line> {
         }
     }
 
-    return outputTemplate.toTypedArray()
+    comparisonOutputData.outputTemplate = outputTemplate.toTypedArray()
 }
 
 fun printBlock(stringsDictionary: Array<String>, outputTemplate: Array<Line>, block: OutputBlock, style: OutputStyle) {
-    for (i in block.templateStart until block.templateStart + block.length) {
-        when (outputTemplate[i].lineMarker) {
-            LineMarker.COMMON -> println("${style.commonPrefix}${stringsDictionary[outputTemplate[i].stringIndex]}")
-            LineMarker.DELETED -> println("${style.deletedPrefix}${stringsDictionary[outputTemplate[i].stringIndex]}")
-            LineMarker.ADDED -> println("${style.addedPrefix}${stringsDictionary[outputTemplate[i].stringIndex]}")
+    outputTemplate.slice(block.templateStart until block.templateStart + block.length).forEach { line ->
+        when (line.lineMarker) {
+            LineMarker.COMMON -> println("${style.commonPrefix}${stringsDictionary[line.stringIndex]}")
+            LineMarker.DELETED -> println("${style.deletedPrefix}${stringsDictionary[line.stringIndex]}")
+            LineMarker.ADDED -> println("${style.addedPrefix}${stringsDictionary[line.stringIndex]}")
         }
     }
 }
@@ -377,7 +468,7 @@ fun unifiedOutput(stringsDictionary: Array<String>, outputTemplate: Array<Line>,
 
     println("--- ${file1Object.name} ${convertEpochToReadableTime(file1Object.lastModified())}")
     println("+++ ${file2Object.name} ${convertEpochToReadableTime(file2Object.lastModified())}")
-    for (block in blocks) {
+    blocks.forEach { block ->
         val file1LinesCnt = getRelativeBlockLength(block, outputTemplate, LineMarker.ADDED)
         val file2LinesCnt = getRelativeBlockLength(block, outputTemplate, LineMarker.DELETED)
         println(
@@ -388,7 +479,22 @@ fun unifiedOutput(stringsDictionary: Array<String>, outputTemplate: Array<Line>,
     }
 }
 
+fun output(comparisonOutputData: ComparisonOutputData, file1Object: File, file2Object: File, parsedArgs: List<Argument>) {
+    when (parsedArgs[0].argumentType) {
+        ArgumentType.PLAIN -> plainOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate)
+        ArgumentType.NORMAL -> normalOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate)
+        ArgumentType.UNIFIED -> unifiedOutput(
+            comparisonOutputData.stringsDictionary,
+            comparisonOutputData.outputTemplate,
+            file1Object,
+            file2Object,
+            parsedArgs[0].argumentValue
+        )
+    }
+}
+
 fun main(args: Array<String>) {
+    val parsedArgs = parseArguments(args)
     checkArguments(args)
 
     val file1Object = openFile(args[args.size - 2])
@@ -400,6 +506,6 @@ fun main(args: Array<String>) {
     markNotCommonLines(comparisonOutputData)
     compareTwoFiles(comparisonOutputData.comparisonData)
 
-    val outputTemplate = produceOutputTemplate(comparisonOutputData.comparisonData)
-    unifiedOutput(comparisonOutputData.stringsDictionary, outputTemplate, file1Object, file2Object)
+    produceOutputTemplate(comparisonOutputData)
+    output(comparisonOutputData, file1Object, file2Object, parsedArgs)
 }
