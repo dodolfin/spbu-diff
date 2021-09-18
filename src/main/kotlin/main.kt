@@ -57,7 +57,7 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>)
  * Обозначает строчку файла, хранит [stringIndex] — индекс строчки в общем словаре строк stringsDictionary и
  * [lineMarker] — роль строчки в изменяющей последовательности строки
  */
-data class Line(val stringIndex: Int, var lineMarker: LineMarker)
+data class Line(val stringIndex: Int, var lineMarker: LineMarker = LineMarker.NONE)
 
 /*
  * Обозначает статус строки согласно алгоритму LCS (COMMON — входит в LCS, DELETED — в первом файле и в LCS не входит и
@@ -267,28 +267,15 @@ fun readFromFile(fileObject: File): List<String> {
  * заполняемая в функции produceOutputTemplate.
  */
 fun stringsToLines(file1Strings: List<String>, file2Strings: List<String>): ComparisonOutputData {
-    val stringsToIndex = mutableMapOf<String, Int>()
-    var freeIndex = 0
-    val stringsDictionary = mutableListOf<String>()
+    val stringsDictionary = mutableSetOf<String>()
+    stringsDictionary.addAll(file1Strings)
+    stringsDictionary.addAll(file2Strings)
 
-    val fromCollections = arrayOf(file1Strings, file2Strings)
-    val file1Indices = mutableListOf<Line>()
-    val file2Indices = mutableListOf<Line>()
-    val toCollections = arrayOf(file1Indices, file2Indices)
-
-    for (i in fromCollections.indices) {
-        for (string in fromCollections[i]) {
-            if (!stringsToIndex.containsKey(string)) {
-                stringsToIndex[string] = freeIndex
-                stringsDictionary.add(string)
-                freeIndex++
-            }
-            toCollections[i].add(toCollections[i].size, Line(stringsToIndex.getOrDefault(string, 0), LineMarker.NONE))
-        }
-    }
+    val file1Indices = file1Strings.map { Line(stringsDictionary.indexOf(it)) }
+    val file2Indices = file2Strings.map { Line(stringsDictionary.indexOf(it)) }
 
     return ComparisonOutputData(
-        stringsDictionary, MutableList(0) { Line(0, LineMarker.NONE) },
+        stringsDictionary.toList(), MutableList(0) { Line(0, LineMarker.NONE) },
         ComparisonData(file1Indices, file2Indices)
     )
 }
