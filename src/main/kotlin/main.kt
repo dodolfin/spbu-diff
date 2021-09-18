@@ -120,7 +120,13 @@ fun terminateOnError(exitMessage: String) {
  * Показать краткую справку по использованию и завершить программу с нулевым кодом возврата.
  */
 fun showHelpAndTerminate() {
-    println("HELP: TODO()")
+    println("""Usage: java -jar diff.jar [OPTION] FILE1 FILE2
+        | 
+        |Options:""".trimMargin("|"))
+    println("  -u[CONTEXT_LINES], --unified=[CONTEXT_LINES]\tUnified output format with [CONTEXT_LINES] context lines (default 3)")
+    println("  -n, --normal\tNormal output format")
+    println("  -p, --plain\tPlain output format (print both files)")
+    println("  --help\tShow this message and exit")
     exitProcess(0)
 }
 
