@@ -8,19 +8,22 @@ import java.time.*
 const val SIZE_LIMIT = 500 * 1024 // Ограничение на размер файла в байтах
 const val LINE_LIMIT = 10000 // Ограничение на размер файла в строчках
 
+// Специальное значение, которое означает, что у аргумента не предусмотрено значения или оно не было введено
+const val NO_VALUE = Int.MIN_VALUE
+
 /*
  * Обозначает опцию программы, передающуюся в командной строке при запуске программы. [argumentType] — сам аргумент,
- * [argumentValue] — значение аргумента (если не предусмотрено, хранится 0)
+ * [argumentValue] — значение аргумента (если не предусмотрено, хранится NO_VALUE)
  */
-data class Argument(val argumentType: ArgumentType, val argumentValue: Int = 0)
+data class Argument(val argumentType: ArgumentType, val argumentValue: Int = NO_VALUE)
 
 /*
  * Все возможные аргументы командной строки. [shortForm] — короткая форма (одна буква), вызов предваряется одним дефисом,
  * числовое значение записывается сразу после, можно сочетать несколько (например, -a0b1), [fullForm] — полная форма,
  * вызов предваряется двумя дефисами, числовое значение записывается через знак равно (например, --unified=4)
  */
-enum class ArgumentType(val shortForm: String, val fullForm: String) {
-    UNIFIED("u", "unified"),
+enum class ArgumentType(val shortForm: String, val fullForm: String, val defaultValue: Int = NO_VALUE) {
+    UNIFIED("u", "unified", 3),
     NORMAL("n", "normal"),
     PLAIN("p", "plain"),
     HELP("", "help")
@@ -122,6 +125,44 @@ fun showHelpAndTerminate() {
 }
 
 /*
+ * Вспомогательная функция для splitIntoArgument, которая преобразует строчку из цифр [value], переданную программе в
+ * командной строке, в число. [flag] — флаг, значение которого задавалось — необходим для вывода ошибки.
+ * [isShortForm] — true, если флаг был в коротком формате (-u, -n) и false, если в полном (--help, --verbose). Т. к.
+ * в полной форме (--unified=3) регулярное выражение захватывает и знак равно, его надо отрезать.
+ */
+fun getValueFromString(flag: String, value: String, isShortForm: Boolean): Int {
+    if (value.length > 9) {
+        terminateOnError("$flag value $value is too big.")
+    }
+
+    if (value.isEmpty()) {
+        return NO_VALUE
+    }
+
+    if (isShortForm) {
+        return value.toInt()
+    }
+    return value.drop(1).toInt()
+}
+
+/*
+ * Вспомогательная функция для splitIntoArgument, которая преобразует строку с флагом [flag] в тип аргумента. Если
+ * строка не соответствует ни одному типу аргумента, программа завершается с ошибкой.
+ */
+fun getArgumentTypeFromFlag(flag: String): ArgumentType {
+    return when (flag) {
+        ArgumentType.HELP.fullForm -> ArgumentType.HELP
+        ArgumentType.PLAIN.shortForm, ArgumentType.PLAIN.fullForm -> ArgumentType.PLAIN
+        ArgumentType.NORMAL.shortForm, ArgumentType.NORMAL.fullForm -> ArgumentType.NORMAL
+        ArgumentType.UNIFIED.shortForm, ArgumentType.UNIFIED.fullForm -> ArgumentType.UNIFIED
+        else -> {
+            terminateOnError("There is no $flag argument.")
+            ArgumentType.HELP
+        }
+    }
+}
+
+/*
  * Функция, которая разбирает список аргументов, переданных программе, [args], выделяет оттуда существующие аргументы
  * (а если есть несуществующие — завершает программу с ошибкой) и присваивает им значения. Если какой-то аргумент
  * введён несколько раз, то берётся последнее его введённое значение.
@@ -146,29 +187,12 @@ fun splitIntoArguments(args: Array<String>): List<Argument> {
         }
 
         searchRegex.findAll(arg).forEach {
-            var (flag, value) = it.destructured
+            val (flag, value) = it.destructured
 
-            if (value.length > 9) {
-                terminateOnError("$flag value $value is too big.")
-            }
-            if (value.isNotEmpty() && !isShortForm) {
-                value = value.drop(1)
-            }
-            var valueToInt = if (value.isNotEmpty()) value.toInt() else 0
+            val argumentType = getArgumentTypeFromFlag(flag)
+            val valueToInt = getValueFromString(flag, value, isShortForm)
 
-            parsedArgs[when (flag) {
-                ArgumentType.HELP.fullForm -> ArgumentType.HELP
-                ArgumentType.PLAIN.shortForm, ArgumentType.PLAIN.fullForm -> ArgumentType.PLAIN
-                ArgumentType.NORMAL.shortForm, ArgumentType.NORMAL.fullForm -> ArgumentType.NORMAL
-                ArgumentType.UNIFIED.shortForm, ArgumentType.UNIFIED.fullForm -> {
-                    valueToInt = if (value.isNotEmpty()) valueToInt else 3
-                    ArgumentType.UNIFIED
-                }
-                else -> {
-                    terminateOnError("There is no $flag argument.")
-                    ArgumentType.HELP
-                }
-            }] = valueToInt
+            parsedArgs[argumentType] = if (valueToInt != NO_VALUE) valueToInt else argumentType.defaultValue
         }
     }
 
@@ -587,7 +611,7 @@ fun getRelativeBlockLength(block: OutputBlock, outputTemplate: List<Line>, ignor
 /*
  * «Объединённый» формат вывода (используется, например, в Github)
  * Сначала выводятся имена сравниваемых файлов и время последнего изменения этих файлов (для этого нужны объекты файлов
- * [file1Object] и [file2Object]. Затем выводятся блоки изменений с контекстом [contextLines] строк около каждого
+ * [file1Object] и [file2Object]). Затем выводятся блоки изменений с контекстом [contextLines] строк около каждого
  * блока (по умолчанию три строки). Если блоки с контекстом пересекаются, то они объединяются в один блок. Каждый блок
  * предваряется заголовком в формате "@@ -s1,l1 +s2,l2 @@" (на выводе без кавычек), где s1 — начало блока относительно
  * первого файла, l1 — количество строк в блоке, содержащихся в первом файле. Аналогично s2 и l2 определяются для второго
