@@ -285,19 +285,19 @@ fun stringsToLines(file1Strings: List<String>, file2Strings: List<String>): Comp
  * добавленными. Ничего не возвращает, так как изменяет исходный объект.
  */
 fun markNotCommonLines(comparisonOutputData: ComparisonOutputData) {
-    val indicesCount = Array(2) { Array(comparisonOutputData.stringsDictionary.size) { 0 } }
+    val indicesCount = MutableList(2) { Array(comparisonOutputData.stringsDictionary.size) { 0 } }
     val fromCollections = arrayOf(comparisonOutputData.comparisonData.file1, comparisonOutputData.comparisonData.file2)
 
-    for (i in fromCollections.indices) {
-        fromCollections[i].forEach {
-            indicesCount[i][it.stringIndex]++
+    fromCollections.forEachIndexed { index, it ->
+        it.forEach { line ->
+            indicesCount[index][line.stringIndex]++
         }
     }
 
-    for (i in fromCollections.indices) {
-        fromCollections[i].forEach {
-            if (indicesCount[1 - i][it.stringIndex] == 0) {
-                it.lineMarker = if (i == 0) LineMarker.DELETED else LineMarker.ADDED
+    fromCollections.forEachIndexed { index, it ->
+        it.forEach { line ->
+            if (indicesCount[1 - index][line.stringIndex] == 0) {
+                line.lineMarker = if (index == 0) LineMarker.DELETED else LineMarker.ADDED
             }
         }
     }
