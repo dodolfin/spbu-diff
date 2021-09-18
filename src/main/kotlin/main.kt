@@ -5,7 +5,7 @@ import java.io.File
 import java.io.InputStream
 import java.time.*
 
-const val SIZE_LIMIT = 500 * 1024 // Ограничение на размер файла в байтах
+const val SIZE_LIMIT = 10 * 1024 * 1024 // Ограничение на размер файла в байтах
 const val LINE_LIMIT = 10000 // Ограничение на размер файла в строчках
 
 // Специальное значение, которое означает, что у аргумента не предусмотрено значения или оно не было введено
@@ -638,6 +638,15 @@ fun output(
     file2Object: File,
     parsedArgs: List<Argument>
 ) {
+    if (comparisonOutputData.outputTemplate.all { it.lineMarker == LineMarker.COMMON }) {
+        return
+    }
+
+    if (parsedArgs.isEmpty()) {
+        normalOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate)
+        return
+    }
+
     when (parsedArgs[0].argumentType) {
         ArgumentType.PLAIN -> plainOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate)
         ArgumentType.NORMAL -> normalOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate)
