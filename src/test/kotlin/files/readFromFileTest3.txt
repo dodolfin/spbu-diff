@@ -1,0 +1,3 @@
+another few lines
+now in Unix style
+(LF)

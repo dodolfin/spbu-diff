@@ -58,7 +58,7 @@ fun showHelpAndTerminate() {
  * в полной форме (--unified=3) регулярное выражение захватывает и знак равно, его надо отрезать.
  */
 fun getValueFromString(flag: String, value: String, isShortForm: Boolean): Int {
-    if (value.length > 9) {
+    if (value.length - (if (!isShortForm) 1 else 0) > 9) {
         terminateOnError("$flag value $value is too big.")
     }
 
@@ -133,7 +133,7 @@ fun splitIntoArguments(args: Array<String>): List<Argument> {
 fun parseArguments(args: Array<String>): List<Argument> {
     val parsedArgs = splitIntoArguments(args)
 
-    if (Argument(ArgumentType.HELP) in parsedArgs) {
+    if ("--help" in args) {
         showHelpAndTerminate()
     }
 

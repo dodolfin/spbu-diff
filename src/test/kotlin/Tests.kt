@@ -2,6 +2,7 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.io.File
 import kotlin.test.*
+import com.dodolfin.diff.input.*
 import com.dodolfin.diff.compare.*
 import com.dodolfin.diff.output.*
 import com.dodolfin.diff.output.normal.*
@@ -19,6 +20,57 @@ internal class Tests {
     @AfterTest
     fun tearDown() {
         System.setOut(standardOut)
+    }
+
+    // К сожалению, протестировать getValueFromString (и другие такие функции) на случаи, когда diff должен
+    // завершать свою работу, кажется невозможным.
+    @Test
+    fun getValueFromStringTests() {
+        assertEquals(100, getValueFromString("flag", "=100", false))
+        assertEquals(2, getValueFromString("flag", "2", true))
+        assertEquals(976976976, getValueFromString("flag", "976976976", true))
+        assertEquals(555666777, getValueFromString("flag", "=555666777", false))
+    }
+
+    @Test
+    fun getArgumentTypeFromFlagTests() {
+        assertEquals(ArgumentType.HELP, getArgumentTypeFromFlag("help"))
+        assertEquals(ArgumentType.PLAIN, getArgumentTypeFromFlag("p"))
+        assertEquals(ArgumentType.UNIFIED, getArgumentTypeFromFlag("unified"))
+        assertEquals(ArgumentType.NORMAL, getArgumentTypeFromFlag("n"))
+        assertEquals(ArgumentType.NORMAL, getArgumentTypeFromFlag("normal"))
+    }
+
+    @Test
+    fun splitIntoArgumentTests() {
+        val args = listOf(
+            arrayOf("-u", "--unified", "file1", "file2"),
+            arrayOf("-nu2ppu3nnu4p", "--help", "--normal", "--unified=2", "file1", "file2"),
+            arrayOf("-p19999", "file1", "file2")
+        )
+        val parsedArgs = listOf(
+            setOf(Argument(ArgumentType.UNIFIED, 3)),
+            setOf(Argument(ArgumentType.HELP), Argument(ArgumentType.NORMAL), Argument(ArgumentType.PLAIN), Argument(ArgumentType.UNIFIED, 2)),
+            setOf(Argument(ArgumentType.PLAIN, 19999))
+        )
+
+        args.forEachIndexed { index, it ->
+            assertEquals(parsedArgs[index], splitIntoArguments(it).toSet())
+        }
+    }
+
+    @Test
+    fun readFromFileTests() {
+        val answers = listOf(
+            listOf("few lines formatted", "", "in windows style", "(CRLF)"),
+            listOf(),
+            listOf("another few lines", "now in Unix style", "(LF)")
+        )
+
+        answers.forEachIndexed { index, it ->
+            val fileObject = File("src/test/kotlin/files/readFromFileTest${ index + 1 }.txt")
+            assertEquals(it, readFromFile(fileObject))
+        }
     }
 
     @Test

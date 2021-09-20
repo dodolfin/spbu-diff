@@ -1,0 +1,4 @@
+few lines formatted
+
+in windows style
+(CRLF)
