@@ -133,6 +133,40 @@ internal class Tests {
     }
 
     @Test
+    fun markNotCommonLinesTests() {
+        val comparisonData = listOf(
+            ComparisonData(
+                listOf(Line(0), Line(1), Line(2), Line(3), Line(4), Line(5), Line(6)),
+                listOf(Line(1), Line(2), Line(3), Line(7))
+            ),
+            ComparisonData(
+                listOf(Line(0), Line(1), Line(2)),
+                listOf(Line(2), Line(0), Line(0), Line(1))
+            ),
+            ComparisonData(
+                listOf(Line(0), Line(3), Line(2), Line(1)),
+                listOf()
+            )
+        )
+        val answers = listOf(
+            ComparisonData(
+                listOf(Line(0, LineMarker.DELETED), Line(1), Line(2), Line(3), Line(4, LineMarker.DELETED), Line(5, LineMarker.DELETED), Line(6, LineMarker.DELETED)),
+                listOf(Line(1), Line(2), Line(3), Line(7, LineMarker.ADDED))
+            ),
+            comparisonData[1],
+            ComparisonData(
+                listOf(Line(0, LineMarker.DELETED), Line(3, LineMarker.DELETED), Line(2, LineMarker.DELETED), Line(1, LineMarker.DELETED)),
+                listOf()
+            )
+        )
+
+        comparisonData.forEachIndexed { index, it ->
+            markNotCommonLines(it)
+            assertEquals(answers[index], it)
+        }
+    }
+
+    @Test
     fun compareTwoFilesTests() {
         val file1Values = listOf(
             listOf("a", "b", "c", "d", "e", "f", "g", "h"),
@@ -158,7 +192,7 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData)
+            markNotCommonLines(comparisonOutputData.comparisonData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
             val file1 = comparisonOutputData.comparisonData.file1
@@ -186,7 +220,7 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData)
+            markNotCommonLines(comparisonOutputData.comparisonData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
             produceOutputTemplate(comparisonOutputData)
@@ -214,7 +248,7 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData)
+            markNotCommonLines(comparisonOutputData.comparisonData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
             produceOutputTemplate(comparisonOutputData)
@@ -247,7 +281,7 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData)
+            markNotCommonLines(comparisonOutputData.comparisonData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
             produceOutputTemplate(comparisonOutputData)
@@ -280,7 +314,7 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData)
+            markNotCommonLines(comparisonOutputData.comparisonData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
             val fakeFile1 = File("src/test/kotlin/file01.1.txt")
