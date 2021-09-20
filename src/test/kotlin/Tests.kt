@@ -317,8 +317,8 @@ internal class Tests {
             markNotCommonLines(comparisonOutputData.comparisonData)
             compareTwoFiles(comparisonOutputData.comparisonData)
 
-            val fakeFile1 = File("src/test/kotlin/file01.1.txt")
-            val fakeFile2 = File("src/test/kotlin/file01.2.txt")
+            val fakeFile1 = File("")
+            val fakeFile2 = File("")
 
             produceOutputTemplate(comparisonOutputData)
             unifiedOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate, fakeFile1, fakeFile2, 1)
