@@ -61,9 +61,9 @@ fun stringsToLines(file1Strings: List<String>, file2Strings: List<String>): Comp
  * Небольшая оптимизация алгоритма поиска LCS — заранее отмечает строчки, которых нет в другом файле, удалёнными или
  * добавленными. Ничего не возвращает, так как изменяет исходный объект.
  */
-fun markNotCommonLines(comparisonOutputData: ComparisonOutputData) {
-    val indicesCount = MutableList(2) { Array(comparisonOutputData.stringsDictionary.size) { 0 } }
-    val fromCollections = arrayOf(comparisonOutputData.comparisonData.file1, comparisonOutputData.comparisonData.file2)
+fun markNotCommonLines(comparisonData: ComparisonData) {
+    val indicesCount = MutableList(2) { MutableList(comparisonData.file1.size + comparisonData.file2.size) { 0 } }
+    val fromCollections = arrayOf(comparisonData.file1, comparisonData.file2)
 
     fromCollections.forEachIndexed { index, it ->
         it.forEach { line ->
@@ -73,7 +73,7 @@ fun markNotCommonLines(comparisonOutputData: ComparisonOutputData) {
 
     fromCollections.forEachIndexed { index, it ->
         it.forEach { line ->
-            if (indicesCount[1 - index][line.stringIndex] == 0) {
+            if (indicesCount[index][line.stringIndex] != 0 && indicesCount[1 - index][line.stringIndex] == 0) {
                 line.lineMarker = if (index == 0) LineMarker.DELETED else LineMarker.ADDED
             }
         }
