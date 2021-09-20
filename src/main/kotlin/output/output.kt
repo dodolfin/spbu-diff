@@ -1,6 +1,8 @@
 package com.dodolfin.diff.output
 
-import com.dodolfin.diff.*
+import com.dodolfin.diff.compare.ComparisonOutputData
+import com.dodolfin.diff.compare.Line
+import com.dodolfin.diff.compare.LineMarker
 import com.dodolfin.diff.input.Argument
 import com.dodolfin.diff.input.ArgumentType
 import com.dodolfin.diff.output.unified.*

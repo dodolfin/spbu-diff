@@ -1,7 +1,7 @@
 package com.dodolfin.diff.output.normal
 
-import com.dodolfin.diff.Line
-import com.dodolfin.diff.LineMarker
+import com.dodolfin.diff.compare.Line
+import com.dodolfin.diff.compare.LineMarker
 import com.dodolfin.diff.output.BlockType
 import com.dodolfin.diff.output.OutputBlock
 import com.dodolfin.diff.output.normalStyle

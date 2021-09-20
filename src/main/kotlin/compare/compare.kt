@@ -1,4 +1,4 @@
-package com.dodolfin.diff
+package com.dodolfin.diff.compare
 
 /*
  * Используется для восстановления ответа в решении задачи о LCS

@@ -1,6 +1,7 @@
 package com.dodolfin.diff
 
 import com.dodolfin.diff.input.*
+import com.dodolfin.diff.compare.*
 import com.dodolfin.diff.output.*
 import kotlin.system.exitProcess
 import kotlin.math.*

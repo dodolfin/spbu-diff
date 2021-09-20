@@ -1,7 +1,7 @@
 package com.dodolfin.diff.output.unified
 
-import com.dodolfin.diff.Line
-import com.dodolfin.diff.LineMarker
+import com.dodolfin.diff.compare.Line
+import com.dodolfin.diff.compare.LineMarker
 import com.dodolfin.diff.output.OutputBlock
 import com.dodolfin.diff.output.printBlock
 import com.dodolfin.diff.output.unifiedStyle
