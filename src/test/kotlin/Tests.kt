@@ -2,6 +2,10 @@ import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.io.File
 import kotlin.test.*
+import com.dodolfin.diff.*
+import com.dodolfin.diff.output.*
+import com.dodolfin.diff.output.normal.*
+import com.dodolfin.diff.output.unified.*
 
 internal class Tests {
     private val standardOut = System.out
