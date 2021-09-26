@@ -68,7 +68,7 @@ internal class Tests {
         )
 
         answers.forEachIndexed { index, it ->
-            val fileObject = File("src/test/kotlin/files/readFromFileTests/readFromFileTest${ index + 1 }.txt")
+            val fileObject = File("test_files/readFromFileTests/readFromFileTest${ index + 1 }.txt")
             assertEquals(it, readFromFile(fileObject))
         }
     }

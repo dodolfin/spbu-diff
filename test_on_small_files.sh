@@ -1,7 +1,7 @@
 #!/bin/bash
 
-FILE_LIST=$(ls src/test/kotlin/files/small_files | sed 's/[12].txt//g' | sort | uniq)
-PREFIX=src/test/kotlin/files/small_files/
+PREFIX=test_files/small_files/
+FILE_LIST=$(ls $PREFIX | sed 's/[12].txt//g' | sort | uniq)
 
 for GROUP in $FILE_LIST
 do
