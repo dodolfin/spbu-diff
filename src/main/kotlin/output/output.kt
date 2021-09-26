@@ -30,15 +30,19 @@ data class ComparisonOutputData(
         var pointer2 = 0
 
         while (pointer1 < file1.size || pointer2 < file2.size) {
-            if (pointer2 >= file2.size || (pointer1 < file1.size && file1[pointer1].lineMarker != LineMarker.COMMON)) {
-                this.outputTemplate.add(file1[pointer1])
-                pointer1++
-            } else if (pointer1 >= file1.size || file2[pointer2].lineMarker != LineMarker.COMMON) {
-                this.outputTemplate.add(file2[pointer2])
-                pointer2++
-            } else {
-                this.outputTemplate.add(file1[pointer1])
-                pointer1++; pointer2++
+            when {
+                pointer2 >= file2.size || (pointer1 < file1.size && file1[pointer1].lineMarker != LineMarker.COMMON) -> {
+                    this.outputTemplate.add(file1[pointer1])
+                    pointer1++
+                }
+                pointer1 >= file1.size || file2[pointer2].lineMarker != LineMarker.COMMON -> {
+                    this.outputTemplate.add(file2[pointer2])
+                    pointer2++
+                }
+                else -> {
+                    this.outputTemplate.add(file1[pointer1])
+                    pointer1++; pointer2++
+                }
             }
         }
     }

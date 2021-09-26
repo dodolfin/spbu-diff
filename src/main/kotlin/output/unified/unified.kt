@@ -26,12 +26,14 @@ fun getUnifiedBlocks(outputTemplate: List<Line>, contextLines: Int): List<Output
 
     // Сначала мы находим индексы всех изменённых блоков и добавляем к ним строки контекста.
     for (i in outputTemplate.indices) {
-        if ((i == 0 && outputTemplate[i].lineMarker != LineMarker.COMMON) ||
-            (i != 0 && outputTemplate[i - 1].lineMarker == LineMarker.COMMON && outputTemplate[i].lineMarker != LineMarker.COMMON)
-        ) {
-            blocksAllBounds.add(max(0, i - contextLines))
-        } else if (i != 0 && outputTemplate[i - 1].lineMarker != LineMarker.COMMON && outputTemplate[i].lineMarker == LineMarker.COMMON) {
-            blocksAllBounds.add(min(outputTemplate.lastIndex, i - 1 + contextLines))
+        when {
+            ((i == 0 && outputTemplate[i].lineMarker != LineMarker.COMMON) ||
+                    (i != 0 && outputTemplate[i - 1].lineMarker == LineMarker.COMMON && outputTemplate[i].lineMarker != LineMarker.COMMON)) -> {
+                blocksAllBounds.add(max(0, i - contextLines))
+            }
+            i != 0 && outputTemplate[i - 1].lineMarker != LineMarker.COMMON && outputTemplate[i].lineMarker == LineMarker.COMMON -> {
+                blocksAllBounds.add(min(outputTemplate.lastIndex, i - 1 + contextLines))
+            }
         }
     }
     if (outputTemplate.last().lineMarker != LineMarker.COMMON) {

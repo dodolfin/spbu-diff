@@ -20,29 +20,30 @@ fun getNormalBlocks(outputTemplate: List<Line>): List<OutputBlock> {
     for (i in outputTemplate.indices) {
         if (outputTemplate[i].lineMarker == LineMarker.COMMON) {
             commonLinesCnt++
-        } else {
-            if (i == 0 || outputTemplate[i - 1].lineMarker != outputTemplate[i].lineMarker) {
-                when (outputTemplate[i].lineMarker) {
-                    LineMarker.DELETED -> blocks.add(
-                        blocks.size, OutputBlock(
-                            i, commonLinesCnt + deletedLinesCnt,
-                            commonLinesCnt + addedLinesCnt, 0, BlockType.DELETE
-                        )
-                    )
-                    LineMarker.ADDED -> blocks.add(
-                        blocks.size, OutputBlock(
-                            i, commonLinesCnt + deletedLinesCnt,
-                            commonLinesCnt + addedLinesCnt, 0, BlockType.ADD
-                        )
-                    )
-                }
-            }
+            continue
+        }
 
-            blocks.last().length++
+        if (i == 0 || outputTemplate[i - 1].lineMarker != outputTemplate[i].lineMarker) {
             when (outputTemplate[i].lineMarker) {
-                LineMarker.DELETED -> deletedLinesCnt++
-                LineMarker.ADDED -> addedLinesCnt++
+                LineMarker.DELETED -> blocks.add(
+                    blocks.size, OutputBlock(
+                        i, commonLinesCnt + deletedLinesCnt,
+                        commonLinesCnt + addedLinesCnt, 0, BlockType.DELETE
+                    )
+                )
+                LineMarker.ADDED -> blocks.add(
+                    blocks.size, OutputBlock(
+                        i, commonLinesCnt + deletedLinesCnt,
+                        commonLinesCnt + addedLinesCnt, 0, BlockType.ADD
+                    )
+                )
             }
+        }
+
+        blocks.last().length++
+        when (outputTemplate[i].lineMarker) {
+            LineMarker.DELETED -> deletedLinesCnt++
+            LineMarker.ADDED -> addedLinesCnt++
         }
     }
 
@@ -70,32 +71,35 @@ fun normalOutput(stringsDictionary: List<String>, outputTemplate: List<Line>) {
             continue
         }
 
-        if (i != blocks.lastIndex && blocks[i].blockType == BlockType.DELETE && blocks[i + 1].blockType == BlockType.ADD &&
-            blocks[i].templateStart + blocks[i].length == blocks[i + 1].templateStart
-        ) {
-            println(
-                "${blocks[i].file1Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file1Start + blocks[i].length}"}" +
-                        "c" +
-                        "${blocks[i + 1].file2Start + 1}${if (blocks[i + 1].length == 1) "" else ",${blocks[i + 1].file2Start + blocks[i + 1].length}"}"
-            )
-            printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
-            println("---")
-            printBlock(stringsDictionary, outputTemplate, blocks[i + 1], normalStyle)
-            skipThisBlock = true
-        } else if (blocks[i].blockType == BlockType.DELETE) {
-            println(
-                "${blocks[i].file1Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file1Start + blocks[i].length}"}" +
-                        "d" +
-                        "${blocks[i].file2Start}"
-            )
-            printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
-        } else {
-            println(
-                "${blocks[i].file1Start}" +
-                        "a" +
-                        "${blocks[i].file2Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file2Start + blocks[i].length}"}"
-            )
-            printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
+        when {
+            (i != blocks.lastIndex && blocks[i].blockType == BlockType.DELETE && blocks[i + 1].blockType == BlockType.ADD &&
+                    blocks[i].templateStart + blocks[i].length == blocks[i + 1].templateStart) -> {
+                println(
+                    "${blocks[i].file1Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file1Start + blocks[i].length}"}" +
+                            "c" +
+                            "${blocks[i + 1].file2Start + 1}${if (blocks[i + 1].length == 1) "" else ",${blocks[i + 1].file2Start + blocks[i + 1].length}"}"
+                )
+                printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
+                println("---")
+                printBlock(stringsDictionary, outputTemplate, blocks[i + 1], normalStyle)
+                skipThisBlock = true
+            }
+            blocks[i].blockType == BlockType.DELETE -> {
+                println(
+                    "${blocks[i].file1Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file1Start + blocks[i].length}"}" +
+                            "d" +
+                            "${blocks[i].file2Start}"
+                )
+                printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
+            }
+            else -> {
+                println(
+                    "${blocks[i].file1Start}" +
+                            "a" +
+                            "${blocks[i].file2Start + 1}${if (blocks[i].length == 1) "" else ",${blocks[i].file2Start + blocks[i].length}"}"
+                )
+                printBlock(stringsDictionary, outputTemplate, blocks[i], normalStyle)
+            }
         }
     }
 }

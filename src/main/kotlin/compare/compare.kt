@@ -39,7 +39,7 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
 
 
     /**
-     * Сравнивает два файла, содержащихся в [comparisonData].
+     * Сравнивает два файла, содержащихся в этом объекте.
      */
     fun compareTwoFiles() {
         // Перед тем как сравнивать строчки, оставим только те, для которых ещё неизвестно, входят они в LCS или нет
@@ -62,15 +62,19 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
          */
         for (prefix1 in file1.indices) {
             for (prefix2 in file2.indices) {
-                if (file1[prefix1] == file2[prefix2]) {
-                    LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2] + 1
-                    LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.REMOVE_FROM_LCS
-                } else if (LCSMemoization[prefix1][prefix2 + 1] > LCSMemoization[prefix1 + 1][prefix2]) {
-                    LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2 + 1]
-                    LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.LEFT
-                } else {
-                    LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1 + 1][prefix2]
-                    LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.UP
+                when {
+                    file1[prefix1] == file2[prefix2] -> {
+                        LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2] + 1
+                        LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.REMOVE_FROM_LCS
+                    }
+                    LCSMemoization[prefix1][prefix2 + 1] > LCSMemoization[prefix1 + 1][prefix2] -> {
+                            LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2 + 1]
+                            LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.LEFT
+                    }
+                    else -> {
+                        LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1 + 1][prefix2]
+                        LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.UP
+                    }
                 }
             }
         }
