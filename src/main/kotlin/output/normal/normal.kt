@@ -7,7 +7,7 @@ import com.dodolfin.diff.output.OutputBlock
 import com.dodolfin.diff.output.normalStyle
 import com.dodolfin.diff.output.printBlock
 
-/*
+/**
  * Генерирует и возвращает список блоков, пригодных для «нормального» формата вывода. Блоки формируются на основе
  * [outputTemplate].
  */
@@ -49,7 +49,7 @@ fun getNormalBlocks(outputTemplate: List<Line>): List<OutputBlock> {
     return blocks
 }
 
-/*
+/**
  * «Нормальный» формат вывода (используется по умолчанию в версии diff для Linux)
  * Изменённые блоки выводятся без контекста вокруг; удаленные строки отмечаются знаком
  * < в начале строки, добавленные — знаком >. Начало каждого блока предваряет описание изменений в формате f1r|op|f2r (в

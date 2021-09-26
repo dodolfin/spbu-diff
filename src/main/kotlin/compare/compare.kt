@@ -1,13 +1,13 @@
 package com.dodolfin.diff.compare
 
-/*
+/**
  * Используется для восстановления ответа в решении задачи о LCS
  */
 enum class ReconstructionMarker {
     NONE, REMOVE_FROM_LCS, LEFT, UP
 }
 
-/*
+/**
  * Данные, необходимые для сравнения и вывода. [stringsDictionary] — общий словарь строчек из двух файлов,
  * [outputTemplate] — заготовка для вывода, в которой строчки расположены в нужном порядке, и затем,
  * в зависимости от конкретного формата, убирает какие-то строчки, [comparisonData] описан далее.
@@ -18,19 +18,19 @@ data class ComparisonOutputData(
     val comparisonData: ComparisonData
 )
 
-/*
+/**
  * Данные, необходимые для сравнения файлов. [file1] и [file2] хранятся в виде индексов соответствующих строк в
  * stringsDictionary
  */
 data class ComparisonData(val file1: List<Line>, val file2: List<Line>)
 
-/*
+/**
  * Обозначает строчку файла, хранит [stringIndex] — индекс строчки в общем словаре строк stringsDictionary и
  * [lineMarker] — роль строчки в изменяющей последовательности строки
  */
 data class Line(val stringIndex: Int, var lineMarker: LineMarker = LineMarker.NONE)
 
-/*
+/**
  * Обозначает статус строки согласно алгоритму LCS (COMMON — входит в LCS, DELETED — в первом файле и в LCS не входит и
  * была удалена, ADDED — аналогично DELETED, была добавлена)
  */
@@ -38,7 +38,7 @@ enum class LineMarker {
     NONE, COMMON, DELETED, ADDED
 }
 
-/*
+/**
  * Преобразовать содержимое файлов в объект типа ComparisonOutputData, в котором содержится общий словарь строк,
  * содержимое файлов в формате Line (индекс строки в словаре и её положение в LCS) и заготовка для вывода, позже
  * заполняемая в функции produceOutputTemplate.
@@ -57,7 +57,7 @@ fun stringsToLines(file1Strings: List<String>, file2Strings: List<String>): Comp
     )
 }
 
-/*
+/**
  * Небольшая оптимизация алгоритма поиска LCS — заранее отмечает строчки, которых нет в другом файле, удалёнными или
  * добавленными. Ничего не возвращает, так как изменяет исходный объект.
  */
@@ -80,7 +80,7 @@ fun markNotCommonLines(comparisonData: ComparisonData) {
     }
 }
 
-/*
+/**
  * Сравнивает два файла, содержащихся в [comparisonData]. Ничего не возвращает, так как изменяет исходный объект.
  */
 fun compareTwoFiles(comparisonData: ComparisonData) {

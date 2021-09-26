@@ -12,12 +12,12 @@ import java.time.ZoneId
 import kotlin.math.max
 import kotlin.math.min
 
-/*
+/**
  * Вспомогательная структура для «объединённого» режима вывода
  */
 data class UnifiedInternalBlock(var leftBound: Int = -1, var rightBound: Int = -1)
 
-/*
+/**
  * Генерирует и возвращает список блоков, пригодных для «объединённого» формата вывода. Блоки формируются на основе
  * [outputTemplate]. Около каждого блока изменений должно быть не более [contextLines] строк контекста.
  */
@@ -90,7 +90,7 @@ fun getUnifiedBlocks(outputTemplate: List<Line>, contextLines: Int): List<Output
     return blocksResult
 }
 
-/*
+/**
  * Вспомогательная функция для «объединённого» формата вывода. Преобразует время в формате UNIX [epochValue] (количество
  * миллисекунд, прошедших с 1 января 1970 года) в читаемый вид. Использует установленный на компьютере часовой пояс.
  */
@@ -98,7 +98,7 @@ fun convertEpochToReadableTime(epochValue: Long): OffsetDateTime {
     return OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochValue), ZoneId.systemDefault())
 }
 
-/*
+/**
  * Вспомогательная функция для «объединённого» формата вывода. В блоке [block] считает количество строк, которые находятся
  * в одном из файлов. Ясно, что, например, для первого файла это будет количество общих строк плюс количество
  * удалённых строк и аналогично для второго файла.
@@ -110,7 +110,7 @@ fun getRelativeBlockLength(block: OutputBlock, outputTemplate: List<Line>, ignor
     return block.length - outputTemplate.slice(blockRange).count { it.lineMarker == ignoredLineMarker }
 }
 
-/*
+/**
  * «Объединённый» формат вывода (используется, например, в Github)
  * Сначала выводятся имена сравниваемых файлов и время последнего изменения этих файлов (для этого нужны объекты файлов
  * [file1Object] и [file2Object]). Затем выводятся блоки изменений с контекстом [contextLines] строк около каждого

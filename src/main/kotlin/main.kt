@@ -4,7 +4,7 @@ import com.dodolfin.diff.input.*
 import com.dodolfin.diff.compare.*
 import com.dodolfin.diff.output.*
 
-/*
+/**
  * Главная функция программы. Объединяет все функции в один алгоритм.
  */
 fun main(args: Array<String>) {

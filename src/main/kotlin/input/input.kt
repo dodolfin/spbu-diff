@@ -4,19 +4,28 @@ import java.io.File
 import java.io.InputStream
 import kotlin.system.exitProcess
 
-const val SIZE_LIMIT = 10 * 1024 * 1024 // Ограничение на размер файла в байтах
-const val LINE_LIMIT = 10000 // Ограничение на размер файла в строчках
+/**
+ * [SIZE_LIMIT] — ограничение на размер файла в байтах
+ */
+const val SIZE_LIMIT = 10 * 1024 * 1024
 
-// Специальное значение, которое означает, что у аргумента не предусмотрено значения или оно не было введено
+/**
+ * [LINE_LIMIT] — ограничение на размер файла в строчках
+ */
+const val LINE_LIMIT = 10000
+
+/**
+ * [NO_VALUE] — cпециальное значение, которое означает, что у аргумента не предусмотрено значения или оно не было введено
+ */
 const val NO_VALUE = Int.MIN_VALUE
 
-/*
+/**
  * Обозначает опцию программы, передающуюся в командной строке при запуске программы. [argumentType] — сам аргумент,
  * [argumentValue] — значение аргумента (если не предусмотрено, хранится NO_VALUE)
  */
 data class Argument(val argumentType: ArgumentType, val argumentValue: Int = NO_VALUE)
 
-/*
+/**
  * Все возможные аргументы командной строки. [shortForm] — короткая форма (одна буква), вызов предваряется одним дефисом,
  * числовое значение записывается сразу после, можно сочетать несколько (например, -a0b1), [fullForm] — полная форма,
  * вызов предваряется двумя дефисами, числовое значение записывается через знак равно (например, --unified=4)
@@ -28,7 +37,7 @@ enum class ArgumentType(val shortForm: String, val fullForm: String, val default
     HELP("", "help")
 }
 
-/*
+/**
  * В случае ошибки вывести сообщение [exitMessage] и завершить программу с ненулевым кодом возврата.
  */
 fun terminateOnError(exitMessage: String) {
@@ -37,7 +46,7 @@ fun terminateOnError(exitMessage: String) {
     exitProcess(1)
 }
 
-/*
+/**
  * Показать краткую справку по использованию и завершить программу с нулевым кодом возврата.
  */
 fun showHelpAndTerminate() {
@@ -51,7 +60,7 @@ fun showHelpAndTerminate() {
     exitProcess(0)
 }
 
-/*
+/**
  * Вспомогательная функция для splitIntoArgument, которая преобразует строчку из цифр [value], переданную программе в
  * командной строке, в число. [flag] — флаг, значение которого задавалось — необходим для вывода ошибки.
  * [isShortForm] — true, если флаг был в коротком формате (-u, -n) и false, если в полном (--help, --verbose). Т. к.
@@ -72,7 +81,7 @@ fun getValueFromString(flag: String, value: String, isShortForm: Boolean): Int {
     return value.drop(1).toInt()
 }
 
-/*
+/**
  * Вспомогательная функция для splitIntoArgument, которая преобразует строку с флагом [flag] в тип аргумента. Если
  * строка не соответствует ни одному типу аргумента, программа завершается с ошибкой.
  */
@@ -89,7 +98,7 @@ fun getArgumentTypeFromFlag(flag: String): ArgumentType {
     }
 }
 
-/*
+/**
  * Функция, которая разбирает список аргументов, переданных программе, [args], выделяет оттуда существующие аргументы
  * (а если есть несуществующие — завершает программу с ошибкой) и присваивает им значения. Если какой-то аргумент
  * введён несколько раз, то берётся последнее его введённое значение.
@@ -126,7 +135,7 @@ fun splitIntoArguments(args: Array<String>): List<Argument> {
     return parsedArgs.toList().map { Argument(it.first, it.second) }
 }
 
-/*
+/**
  * Функция, которая берёт разобранные аргументы из splitIntoArguments и делает несколько проверок на совместимость
  * разных аргументов и на количество аргументов. Если всё в порядке, возвращает список аргументов.
  */
@@ -148,7 +157,7 @@ fun parseArguments(args: Array<String>): List<Argument> {
     return parsedArgs
 }
 
-/*
+/**
  * Создаёт и возвращает объект файла по адресу [pathToFile] и вместе с этим делает несколько проверок на
  * существование файла, на его тип, на право чтения и на длину файла.
  */
@@ -171,7 +180,7 @@ fun openFile(pathToFile: String): File {
     return fileObject
 }
 
-/*
+/**
  * Считать содержимое файла из объекта [fileObject] и вернуть список строк файла в формате String.
  */
 fun readFromFile(fileObject: File): List<String> {

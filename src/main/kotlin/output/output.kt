@@ -9,7 +9,7 @@ import com.dodolfin.diff.output.unified.*
 import com.dodolfin.diff.output.normal.*
 import java.io.File
 
-/*
+/**
  * Почти все режимы ввода предусматривают вывод каждого изменения в отдельном блоке (с контекстом или без).
  * [templateStart] — индекс начала блока в заготовке вывода outputTemplate, [file1Start] и [file2Start] либо номер
  * первой строчки в соответствующем файле, если она входит в блок, либо номер последней строчки в соответствующем файле
@@ -23,7 +23,7 @@ data class OutputBlock(
     val blockType: BlockType = BlockType.DOESNT_MATTER
 )
 
-/*
+/**
  * Для «нормального» режима вывода необходимо различать блоки, где производится удаление (DELETE) и добавление (ADD).
  * Для остальных режимов вывода тип блока не имеет значения (DOESNT_MATTER)
  */
@@ -31,20 +31,20 @@ enum class BlockType {
     DOESNT_MATTER, ADD, DELETE
 }
 
-/*
+/**
  * В разных режимах вывода используются разные символы, чтобы показать, что очередная строка была удалена ([deletedPrefix]),
  * добавлена ([addedPrefix]), есть в обоих файлах ([commonPrefix])
  */
 data class OutputStyle(val commonPrefix: String, val deletedPrefix: String, val addedPrefix: String)
 
-/*
+/**
  * Стили вывода для разных режимов
  */
 val plusMinusStyle = OutputStyle("  ", "- ", "+ ")
 val unifiedStyle = OutputStyle(" ", "-", "+")
 val normalStyle = OutputStyle("  ", "< ", "> ")
 
-/*
+/**
  * Алгоритм, похожий на сортировку объединением, объединяет строки двух файлов нужном для вывода порядке (общие строки идут
  * по порядку, если есть удаление и добавление в одной точке LCS, то сначала выводится удаление, а затем добавление).
  * Ничего не возвращает, так как изменяет исходный объект.
@@ -69,7 +69,7 @@ fun produceOutputTemplate(comparisonOutputData: ComparisonOutputData) {
     }
 }
 
-/*
+/**
  * Вывести на печать какой-то блок [block] из заготовки для вывода [outputTemplate]. Так как в outputTemplate хранятся
  * лишь индексы строк, нужен общий словарь [stringsDictionary], где хранятся сами строки файлов. Для разных
  * режимов вывода нужны разные символы, показывающие статус строки — эта информация хранится в [style].
@@ -84,7 +84,7 @@ fun printBlock(stringsDictionary: List<String>, outputTemplate: List<Line>, bloc
     }
 }
 
-/*
+/**
  * Выводит объединение двух файлов [outputTemplate]. Так как в outputTemplate хранятся лишь индексы строк,
  * нужен общий словарь [stringsDictionary], где хранятся сами строки файлов.
  */
@@ -92,7 +92,7 @@ fun plainOutput(stringsDictionary: List<String>, outputTemplate: List<Line>) {
     printBlock(stringsDictionary, outputTemplate, OutputBlock(0, 0, 0, outputTemplate.size), plusMinusStyle)
 }
 
-/*
+/**
  * На основе аргументов [parsedArgs], переданных программе, осуществляет вывод в нужном формате. [comparisonOutputData]
  * нужен для вывода, объекты файлов [file1Object] и [file2Object] нужны для «объединённого» формата вывода.
  */
