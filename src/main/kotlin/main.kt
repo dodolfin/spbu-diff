@@ -16,9 +16,7 @@ fun main(args: Array<String>) {
     val file1Strings = readFromFile(file1Object)
     val file2Strings = readFromFile(file2Object)
     val comparisonOutputData = stringsToLines(file1Strings, file2Strings)
-    markNotCommonLines(comparisonOutputData.comparisonData)
-    compareTwoFiles(comparisonOutputData.comparisonData)
+    comparisonOutputData.comparisonAndOutputTemplate()
 
-    produceOutputTemplate(comparisonOutputData)
     output(comparisonOutputData, file1Object, file2Object, parsedArgs)
 }

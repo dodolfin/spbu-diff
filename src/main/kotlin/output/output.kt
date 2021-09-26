@@ -1,6 +1,6 @@
 package com.dodolfin.diff.output
 
-import com.dodolfin.diff.compare.ComparisonOutputData
+import com.dodolfin.diff.compare.ComparisonData
 import com.dodolfin.diff.compare.Line
 import com.dodolfin.diff.compare.LineMarker
 import com.dodolfin.diff.input.Argument
@@ -8,6 +8,50 @@ import com.dodolfin.diff.input.ArgumentType
 import com.dodolfin.diff.output.unified.*
 import com.dodolfin.diff.output.normal.*
 import java.io.File
+
+/**
+ * Данные, необходимые для сравнения и вывода. [stringsDictionary] — общий словарь строчек из двух файлов,
+ * [outputTemplate] — заготовка для вывода, в которой строчки расположены в нужном порядке, и затем,
+ * в зависимости от конкретного формата, убирает какие-то строчки, [comparisonData] описан далее.
+ */
+data class ComparisonOutputData(
+    val stringsDictionary: List<String>,
+    val outputTemplate: MutableList<Line>,
+    val comparisonData: ComparisonData
+) {
+    /**
+     * Алгоритм, похожий на сортировку объединением, объединяет строки двух файлов нужном для вывода порядке (общие строки идут
+     * по порядку, если есть удаление и добавление в одной точке LCS, то сначала выводится удаление, а затем добавление).
+     */
+    fun produceOutputTemplate() {
+        val file1 = this.comparisonData.file1
+        val file2 = this.comparisonData.file2
+        var pointer1 = 0
+        var pointer2 = 0
+
+        while (pointer1 < file1.size || pointer2 < file2.size) {
+            if (pointer2 >= file2.size || (pointer1 < file1.size && file1[pointer1].lineMarker != LineMarker.COMMON)) {
+                this.outputTemplate.add(file1[pointer1])
+                pointer1++
+            } else if (pointer1 >= file1.size || file2[pointer2].lineMarker != LineMarker.COMMON) {
+                this.outputTemplate.add(file2[pointer2])
+                pointer2++
+            } else {
+                this.outputTemplate.add(file1[pointer1])
+                pointer1++; pointer2++
+            }
+        }
+    }
+
+    /**
+     * Сравнивает файлы и делает заготовку для вывода. Сделано для удобства работы с comparisonOutputData.
+     */
+    fun comparisonAndOutputTemplate() {
+        this.comparisonData.markNotCommonLines()
+        this.comparisonData.compareTwoFiles()
+        this.produceOutputTemplate()
+    }
+}
 
 /**
  * Почти все режимы ввода предусматривают вывод каждого изменения в отдельном блоке (с контекстом или без).
@@ -43,31 +87,6 @@ data class OutputStyle(val commonPrefix: String, val deletedPrefix: String, val 
 val plusMinusStyle = OutputStyle("  ", "- ", "+ ")
 val unifiedStyle = OutputStyle(" ", "-", "+")
 val normalStyle = OutputStyle("  ", "< ", "> ")
-
-/**
- * Алгоритм, похожий на сортировку объединением, объединяет строки двух файлов нужном для вывода порядке (общие строки идут
- * по порядку, если есть удаление и добавление в одной точке LCS, то сначала выводится удаление, а затем добавление).
- * Ничего не возвращает, так как изменяет исходный объект.
- */
-fun produceOutputTemplate(comparisonOutputData: ComparisonOutputData) {
-    val file1 = comparisonOutputData.comparisonData.file1
-    val file2 = comparisonOutputData.comparisonData.file2
-    var pointer1 = 0
-    var pointer2 = 0
-
-    while (pointer1 < file1.size || pointer2 < file2.size) {
-        if (pointer2 >= file2.size || (pointer1 < file1.size && file1[pointer1].lineMarker != LineMarker.COMMON)) {
-            comparisonOutputData.outputTemplate.add(file1[pointer1])
-            pointer1++
-        } else if (pointer1 >= file1.size || file2[pointer2].lineMarker != LineMarker.COMMON) {
-            comparisonOutputData.outputTemplate.add(file2[pointer2])
-            pointer2++
-        } else {
-            comparisonOutputData.outputTemplate.add(file1[pointer1])
-            pointer1++; pointer2++
-        }
-    }
-}
 
 /**
  * Вывести на печать какой-то блок [block] из заготовки для вывода [outputTemplate]. Так как в outputTemplate хранятся
