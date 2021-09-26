@@ -161,7 +161,7 @@ internal class Tests {
         )
 
         comparisonData.forEachIndexed { index, it ->
-            markNotCommonLines(it)
+            it.markNotCommonLines()
             assertEquals(answers[index], it)
         }
     }
@@ -192,8 +192,8 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData.comparisonData)
-            compareTwoFiles(comparisonOutputData.comparisonData)
+
+            comparisonOutputData.comparisonAndOutputTemplate()
 
             val file1 = comparisonOutputData.comparisonData.file1
             assertEquals(answers[i], file1.count { it.lineMarker == LineMarker.COMMON })
@@ -220,10 +220,9 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData.comparisonData)
-            compareTwoFiles(comparisonOutputData.comparisonData)
 
-            produceOutputTemplate(comparisonOutputData)
+            comparisonOutputData.comparisonAndOutputTemplate()
+
             assertEquals(answers[i], comparisonOutputData.outputTemplate.map {it.stringIndex})
         }
     }
@@ -248,10 +247,9 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData.comparisonData)
-            compareTwoFiles(comparisonOutputData.comparisonData)
 
-            produceOutputTemplate(comparisonOutputData)
+            comparisonOutputData.comparisonAndOutputTemplate()
+
             plainOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate)
             assertEquals(answers[i], stream.toString().lines())
             stream.reset()
@@ -281,10 +279,9 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData.comparisonData)
-            compareTwoFiles(comparisonOutputData.comparisonData)
 
-            produceOutputTemplate(comparisonOutputData)
+            comparisonOutputData.comparisonAndOutputTemplate()
+
             normalOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate)
             assertEquals(answers[i], stream.toString().lines())
             stream.reset()
@@ -314,13 +311,12 @@ internal class Tests {
 
         for (i in file1Values.indices) {
             val comparisonOutputData = stringsToLines(file1Values[i], file2Values[i])
-            markNotCommonLines(comparisonOutputData.comparisonData)
-            compareTwoFiles(comparisonOutputData.comparisonData)
 
             val fakeFile1 = File("")
             val fakeFile2 = File("")
 
-            produceOutputTemplate(comparisonOutputData)
+            comparisonOutputData.comparisonAndOutputTemplate()
+
             unifiedOutput(comparisonOutputData.stringsDictionary, comparisonOutputData.outputTemplate, fakeFile1, fakeFile2, 1)
             assertEquals(answers[i], stream.toString().lines().drop(2))
             stream.reset()
