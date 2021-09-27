@@ -52,7 +52,8 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
          * а в массиве LCSReconstruction хранятся данные для восстановления самой LCS.
          */
         val LCSMemoization = MutableList(file1.size + 1) { MutableList(file2.size + 1) { 0 } }
-        val LCSReconstruction = MutableList(file1.size + 1) { MutableList(file2.size + 1) { ReconstructionMarker.NONE } }
+        val LCSReconstruction =
+            MutableList(file1.size + 1) { MutableList(file2.size + 1) { ReconstructionMarker.NONE } }
 
         /*
          * В массиве LCSReconstruction значение
@@ -68,8 +69,8 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
                         LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.REMOVE_FROM_LCS
                     }
                     LCSMemoization[prefix1][prefix2 + 1] > LCSMemoization[prefix1 + 1][prefix2] -> {
-                            LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2 + 1]
-                            LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.LEFT
+                        LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1][prefix2 + 1]
+                        LCSReconstruction[prefix1 + 1][prefix2 + 1] = ReconstructionMarker.LEFT
                     }
                     else -> {
                         LCSMemoization[prefix1 + 1][prefix2 + 1] = LCSMemoization[prefix1 + 1][prefix2]

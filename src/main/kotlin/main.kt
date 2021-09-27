@@ -1,8 +1,10 @@
 package com.dodolfin.diff
 
-import com.dodolfin.diff.input.*
-import com.dodolfin.diff.compare.*
-import com.dodolfin.diff.output.*
+import com.dodolfin.diff.compare.stringsToLines
+import com.dodolfin.diff.input.openFile
+import com.dodolfin.diff.input.parseArguments
+import com.dodolfin.diff.input.readFromFile
+import com.dodolfin.diff.output.output
 
 /**
  * Главная функция программы. Объединяет все функции в один алгоритм.

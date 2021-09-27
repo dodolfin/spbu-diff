@@ -5,8 +5,8 @@ import com.dodolfin.diff.compare.Line
 import com.dodolfin.diff.compare.LineMarker
 import com.dodolfin.diff.input.Argument
 import com.dodolfin.diff.input.ArgumentType
-import com.dodolfin.diff.output.unified.*
-import com.dodolfin.diff.output.normal.*
+import com.dodolfin.diff.output.normal.normalOutput
+import com.dodolfin.diff.output.unified.unifiedOutput
 import java.io.File
 
 /**
