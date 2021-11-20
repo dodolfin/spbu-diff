@@ -1,7 +1,7 @@
 # Programming Fundamentals course. Mathematics and Computer Science Faculty at SPbU
 
 ## Project #1. Diff utility
-[Task (in russian)](./TASK.md)
+[Task (in Russian)](./TASK.md)
 
 ### Usage
 `java -jar diff.jar [OPTIONS] FILE1 FILE2` (run from root of the project directory)
