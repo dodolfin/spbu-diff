@@ -1,76 +1,74 @@
-# Курс основ программирования на МКН СПбГУ
+# Programming Fundamentals course. Mathematics and Computer Science Faculty at SPbU
 
-## Проект 1: утилита diff
-[Постановка задачи](./TASK.md)
+## Project #1. Diff utility
+[Task (in russian)](./TASK.md)
 
-### Использование
-`java -jar diff.jar [ОПЦИИ] ФАЙЛ1 ФАЙЛ2` (запускать из корня проекта)
+### Usage
+`java -jar diff.jar [OPTIONS] FILE1 FILE2` (run from root of the project directory)
 
-Консольная утилита diff сравнивает два файла ФАЙЛ1 и ФАЙЛ2 и выводит разницу между ними в формате
-последовательности из общих, удалённых и добавленных строк. Желаемый формат вывода задаётся ОПЦИЯМИ.
+Command-line utility diff compares FILE1 and FILE2 files and prints difference between them as
+a sequence of added, deleted or changed lines. Output format is defined by OPTIONS.
 
-### Входные данные
-На вход подаются два пути к файлам (абсолютные или относительные). Максимальный размер файла — 10 МБайт,
-максимальное количество строк — 10000.
+### Input
+Two file paths (absolute or relative) are given. The size of the file should be 10 Mb or less with 10000 or less lines.
 
-### Обработка файлов
-diff находит наибольшую общую подпоследовательность двух файлов с использованием простого алгоритма, работающего
-с асимптотикой O(NM), где N и M — количество строк в первом и втором файле соответственно.
+### File processing
+diff finds Largest Common Sequence of lines in two files. The algorithm takes time of O(NM), where N and M are the number
+of lines in first and second file correspondingly.
 
-### Выходные данные
-Вывод осуществляется в консоль (стандартный вывод). Используйте `... diff.jar ... > out.txt`, чтобы перенаправить вывод в файл `out.txt`.
+### Output
+Output is done through the means of command-line (standard output). Use `... diff.jar ... > out.txt` to redirect output to file `out.txt`.
 
-Если поданные на вход файлы одинаковые, то программа ничего не выводит. В противном случае, если не было передано ОПЦИЙ,
-вывод осуществляется в «нормальном» формате. Различные режимы вывода не сочетаются между собой. Вызов различных форматов вывода описан
-ниже.
+If two files are same, output is empty. Otherwise, if OPTIONS is empty, output format is „normal“.
+Different output formats are not compatible. All output formats and OPTIONS that trigger them are described below.
 
-### «Объединённый» формат вывода
-ОПЦИЯ: `-u[CONTEXT_LINES] --unified=[CONTEXT_LINES]`
+### „Unified“ output format
+OPTION: `-u[CONTEXT_LINES] --unified=[CONTEXT_LINES]`
 
-«Объединённый» формат вывода (используется, например, в Github).
+„Unified“ output format (used in GitHub).
 
-Сначала выводятся имена сравниваемых файлов и время последнего изменения этих файлов. Затем выводятся блоки изменений с контекстом CONTEXT_LINES (по умолчанию 3) строк около каждого
-блока (по умолчанию три строки). Если блоки с контекстом пересекаются, то они объединяются в один блок.
+First two lines are the names of compared files and the time of last modification of each
+file. Then added/deleted/changed blocks are printed. Each block contains as much as possible, but
+no more than CONTEXT_LINES (3 by default) context lines around it (those are common lines, they are not printed in „normal“ mode).
+If blocks are overlapping, they are printed merged.
 
-Каждый блок предваряется заголовком в формате `@@ -s1,l1 +s2,l2 @@` (на выводе без кавычек), где s1 — начало блока относительно
-первого файла, l1 — количество строк в блоке, содержащихся в первом файле. Аналогично s2 и l2 определяются для второго
-файла.
+Each block is preceded by line describing changes in the following
+format: `@@ -s1,l1 +s2,l2 @@` , where `s1` is the beginning of the block in first
+file relative terms, `l1` is the number of lines in the block which are present in the first file. `s2` and `l2` are defined
+similar.
 
-### Нормальный формат вывода
-ОПЦИЯ: `-n --normal`
+### „Normal“ output format
+OPTION: `-n --normal`
 
-«Нормальный» формат вывода (используется по умолчанию).
+„Normal“ output format (default output format in diff utility for Linux).
 
-Изменённые блоки выводятся без контекста вокруг; удаленные строки отмечаются знаком
-< в начале строки, добавленные — знаком >.
+Changed blocks are displayed without context around them; deleted and added lines are preceded with `<` and `>` signs respectively.
 
-Начало каждого блока предваряет описание изменений в формате `fot`, где `o` — символ, обозначающий характер операции (`a` — добавление, `d` — удаление, `c` — изменение), `f` описывает область в
-первом файле, откуда были удалены или куда были бы вставлены строчки из второго файла, если бы их вставили в первый (например, `1,3` означает что были изменены или удалены строчки с 1 по 3).
-Аналогично, `t` описывает область во втором файле, куда были добавлены или где были бы строчки из первого файла,
-если бы их не удалили.
+Each block is preceded by line which describes changes in the following format:
+`f1r|op|f2r` (without `|` in actual output), where `op` is the type of operation (`a` for addition, `d` for deletion, `c` for changing),
+`f1r` describes a range in the first file from where lines were deleted or where would lines from second file appear
+if we would insert them in the first file. `f2r` describes the same rang for second file.
 
-### Простой формат вывода
-ОПЦИЯ: `--plain`
+### Plain output format
+OPTION: `--plain`
 
-Простой формат вывода.
+Plain output format.
 
-Выводит объединение обоих файлов. Удалённые строки показываются минусом в начале строки, добавленные — плюсом.
+Prints two files merged. Added lines are preceded by `+`, deleted lines are preceded by `-`.
 
-### Получение помощи
-Используйте ОПЦИЮ `--help`, чтобы получить краткую справку и завершить программу.
+### Getting help
+Use OPTION `--help` to show usage and options description and terminate the program.
 
-### Тестирование и результаты тестов
-Чтобы запустить все тесты в IntelliJ IDEA, выберите в меню «Project» папку с тестами и нажмите `Ctrl+Shift+F10` (или 
-выберите это же действие в контекстном меню).
+### Testing and test results
+While in IntelliJ IDEA, to run all tests choose folder with tests (`./test`) in „Project“ tab and press `Ctrl+Shift+F10` (or choose
+this action in the context menu).
 
-В папке `test_files/small_files` находятся небольшие файлы, на которых можно проверить программу. Можно запустить
-bash-скрипт `test_on_small_files.sh` в корневой директории, который выведет все файлы и покажет на них результат работы diff
-(как в одну сторону, так и в другую).
+`test_files/small_files` contains small files for testing program.
+Bash script `test_on_small_files.sh` in the root directory prints all files and shows diff output on them.
 
-Там же есть папка 
-`large_files`, на которых я протестировал насколько пригодна моя программа в качестве рабочего инструмента нахождения разницы
-между файлами с помощью утилиты `patch`. 
+In `test_files/large_files` folder large (a lot of lines) files are stored. I used them and UNIX implementantion of `patch` utility 
+to test if my program is suitable as a real diff tool. 
 
-Результаты: так как разработка велась на Windows, в файлах окончания строк в стиле Windows (`\r\n`). `patch` не умеет работать
-с этим. Если изменить окончания строк на UNIX-стиль (`\n`), то патчи применяются на 6/10 — хотя бы один блок применяется с ошибкой,
-особенно с этим проблемы в «объединённом» режиме вывода.
+Results: since development was done on Windows, files have CRLF (`\r\n`) lines endings. `patch` isn't able to work with that. 
+So I changed line endings to LF (`\n`) and then run my program again. On a 10-Point scale my program scores 6/10: at least one block of original file is patched with some kind of error,
+especially when using „unified“ output format.

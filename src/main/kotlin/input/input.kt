@@ -5,30 +5,31 @@ import java.io.InputStream
 import kotlin.system.exitProcess
 
 /**
- * [SIZE_LIMIT] — ограничение на размер файла в байтах
+ * Maximum size of file in bytes
  */
 const val SIZE_LIMIT = 10 * 1024 * 1024
 
 /**
- * [LINE_LIMIT] — ограничение на размер файла в строчках
+ * Maximum size of file in lines
  */
 const val LINE_LIMIT = 10000
 
 /**
- * [NO_VALUE] — cпециальное значение, которое означает, что у аргумента не предусмотрено значения или оно не было введено
+ * Special value used for handling command line arguments. Means that option doesn't have an argument value or didn't
+ * receive it
  */
 const val NO_VALUE = Int.MIN_VALUE
 
 /**
- * Обозначает опцию программы, передающуюся в командной строке при запуске программы. [argumentType] — сам аргумент,
- * [argumentValue] — значение аргумента (если не предусмотрено, хранится NO_VALUE)
+ * Stores command-line option (option is like "-s 1200" in some command-line linux utility).
  */
 data class Argument(val argumentType: ArgumentType, val argumentValue: Int = NO_VALUE)
 
 /**
- * Все возможные аргументы командной строки. [shortForm] — короткая форма (одна буква), вызов предваряется одним дефисом,
- * числовое значение записывается сразу после, можно сочетать несколько (например, -a0b1), [fullForm] — полная форма,
- * вызов предваряется двумя дефисами, числовое значение записывается через знак равно (например, --unified=4)
+ * All possible command-line options. [shortForm] is a short name of an option (one character) preceded by hyphen sign,
+ * followed (without a space delimiter) by a numeric value, allows multiple option form (e.g. -a0b1)
+ * [fullForm] is a long name of an option preceded by two hyphen signs, followed by a numeric value with equals sign as
+ * a delimiter (e.g. --unified=4)
  */
 enum class ArgumentType(val shortForm: String, val fullForm: String, val defaultValue: Int = NO_VALUE) {
     UNIFIED("u", "unified", 3),
@@ -38,7 +39,7 @@ enum class ArgumentType(val shortForm: String, val fullForm: String, val default
 }
 
 /**
- * В случае ошибки вывести сообщение [exitMessage] и завершить программу с ненулевым кодом возврата.
+ * In case of some error print [exitMessage], terminate the program and return non-zero value.
  */
 fun terminateOnError(exitMessage: String) {
     println(exitMessage)
@@ -47,7 +48,7 @@ fun terminateOnError(exitMessage: String) {
 }
 
 /**
- * Показать краткую справку по использованию и завершить программу с нулевым кодом возврата.
+ * Show usage and options description and terminate the program with zero return value.
  */
 fun showHelpAndTerminate() {
     println(
@@ -63,10 +64,10 @@ fun showHelpAndTerminate() {
 }
 
 /**
- * Вспомогательная функция для splitIntoArgument, которая преобразует строчку из цифр [value], переданную программе в
- * командной строке, в число. [flag] — флаг, значение которого задавалось — необходим для вывода ошибки.
- * [isShortForm] — true, если флаг был в коротком формате (-u, -n) и false, если в полном (--help, --verbose). Т. к.
- * в полной форме (--unified=3) регулярное выражение захватывает и знак равно, его надо отрезать.
+ * splitIntoArgument service function. Transforms numeric string [value], received as a command-line argument, to
+ * a number. [flag] is the name of the option which value was ser. We use it to display error message.
+ * [isShortForm] is true if flag is in shortForm (-u, -n) and false otherwise (--help, --verbose). My regex catches
+ * = sign with the flag, so [isShortForm] is used to decide if we should drop the last character.
  */
 fun getValueFromString(flag: String, value: String, isShortForm: Boolean): Int {
     if (value.length - (if (!isShortForm) 1 else 0) > 9) {
@@ -84,8 +85,8 @@ fun getValueFromString(flag: String, value: String, isShortForm: Boolean): Int {
 }
 
 /**
- * Вспомогательная функция для splitIntoArgument, которая преобразует строку с флагом [flag] в тип аргумента. Если
- * строка не соответствует ни одному типу аргумента, программа завершается с ошибкой.
+ * splitIntoArgument service function. Transforms string with option by the name of [flag] into option type. If there
+ * is no such option, the program displays the error message and terminates.
  */
 fun getArgumentTypeFromFlag(flag: String): ArgumentType {
     return when (flag) {
@@ -101,9 +102,9 @@ fun getArgumentTypeFromFlag(flag: String): ArgumentType {
 }
 
 /**
- * Функция, которая разбирает список аргументов, переданных программе, [args], выделяет оттуда существующие аргументы
- * (а если есть несуществующие — завершает программу с ошибкой) и присваивает им значения. Если какой-то аргумент
- * введён несколько раз, то берётся последнее его введённое значение.
+ * Transforms raw [args] into list of parsed Arguments with values. If [args] contain an argument which doesn't exist,
+ * the program terminates with an error message. If an option appears multiple times in [args], only the last value (or default
+ * value, if last value is empty) is used.
  */
 fun splitIntoArguments(args: Array<String>): List<Argument> {
     val parsedArgs = mutableMapOf<ArgumentType, Int>()
@@ -138,8 +139,8 @@ fun splitIntoArguments(args: Array<String>): List<Argument> {
 }
 
 /**
- * Функция, которая берёт разобранные аргументы из splitIntoArguments и делает несколько проверок на совместимость
- * разных аргументов и на количество аргументов. Если всё в порядке, возвращает список аргументов.
+ * Checks [args] size and arguments received from [splitIntoArguments] for compatibility. If something is wrong,
+ * terminates the program with an error message. Otherwise, returns the list of arguments.
  */
 fun parseArguments(args: Array<String>): List<Argument> {
     val parsedArgs = splitIntoArguments(args)
@@ -160,8 +161,8 @@ fun parseArguments(args: Array<String>): List<Argument> {
 }
 
 /**
- * Создаёт и возвращает объект файла по адресу [pathToFile] и вместе с этим делает несколько проверок на
- * существование файла, на его тип, на право чтения и на длину файла.
+ * Creates file object for file at [pathToFile], checks if it exists, is normal file, is readable and its size is in
+ * limits. If something is wrong, terminates the program with an error message. Otherwise, returns the file object.
  */
 fun openFile(pathToFile: String): File {
     val fileObject = File(pathToFile)
@@ -183,7 +184,7 @@ fun openFile(pathToFile: String): File {
 }
 
 /**
- * Считать содержимое файла из объекта [fileObject] и вернуть список строк файла в формате String.
+ * Returns contents of file at [fileObject] in the form of lines list.
  */
 fun readFromFile(fileObject: File): List<String> {
     val inputStream: InputStream = fileObject.inputStream()

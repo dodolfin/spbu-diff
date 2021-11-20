@@ -7,7 +7,7 @@ import com.dodolfin.diff.input.readFromFile
 import com.dodolfin.diff.output.output
 
 /**
- * Главная функция программы. Объединяет все функции в один алгоритм.
+ * Main function.
  */
 fun main(args: Array<String>) {
     val parsedArgs = parseArguments(args)

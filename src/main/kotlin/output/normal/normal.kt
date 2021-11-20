@@ -8,8 +8,7 @@ import com.dodolfin.diff.output.normalStyle
 import com.dodolfin.diff.output.printBlock
 
 /**
- * Генерирует и возвращает список блоков, пригодных для «нормального» формата вывода. Блоки формируются на основе
- * [outputTemplate].
+ * Returns „normal“ output format blocks generated from [outputTemplate].
  */
 fun getNormalBlocks(outputTemplate: List<Line>): List<OutputBlock> {
     val blocks = mutableListOf<OutputBlock>()
@@ -51,15 +50,14 @@ fun getNormalBlocks(outputTemplate: List<Line>): List<OutputBlock> {
 }
 
 /**
- * «Нормальный» формат вывода (используется по умолчанию в версии diff для Linux)
- * Изменённые блоки выводятся без контекста вокруг; удаленные строки отмечаются знаком
- * < в начале строки, добавленные — знаком >. Начало каждого блока предваряет описание изменений в формате f1r|op|f2r (в
- * выводе без |), где op — характер операции (a — добавление, d — удаление, c — изменение), f1r описывает область в
- * первом файле, откуда были удалены или куда были бы вставлены строчки из второго файла, если бы их вставили в первый.
- * Аналогично, f2r описывает область во втором файле, куда были добавлены или где были бы строчки из первого файла,
- * если бы их не удалили.
- * Статус каждой строчки хранится в [outputTemplate]. Так как в outputTemplate хранятся лишь индексы строк, нужен общий
- * словарь [stringsDictionary], где хранятся сами строки файлов.
+ * «Normal» output format (default output format in diff utility for Linux)
+ * Changed blocks are displayed without context around them; deleted and added lines are preceded with < and > signs correspondingly.
+ * Each block is preceded by line which describes changes in the following format:
+ * f1r|op|f2r (without | in actual output), where op is the type of operation (a for addition, d for deletion, c for changing),
+ * f1r describes a range in the first file from where lines were deleted or where would lines from second file appear
+ * if we would insert them in the first file. f2r describes the same rang for second file.
+ * Information about lines status (common, added or deleted) is stored [outputTemplate].
+ * Since [outputTemplate] only stores indexes of lines, we need [stringsDictionary] to print strings themselves.
  */
 fun normalOutput(stringsDictionary: List<String>, outputTemplate: List<Line>) {
     val blocks = getNormalBlocks(outputTemplate)

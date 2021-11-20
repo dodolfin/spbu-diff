@@ -13,18 +13,18 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Вспомогательная структура для «объединённого» режима вывода
+ * Supporting data class for the „unified“ output format.
  */
 data class UnifiedInternalBlock(var leftBound: Int = -1, var rightBound: Int = -1)
 
 /**
- * Генерирует и возвращает список блоков, пригодных для «объединённого» формата вывода. Блоки формируются на основе
- * [outputTemplate]. Около каждого блока изменений должно быть не более [contextLines] строк контекста.
+ * Transforms [outputTemplate] to the list of blocks suitable for „unified“ output format. As much as possible, but
+ * no more than [contextLines] lines should be around each addition/deletion/change block.
  */
 fun getUnifiedBlocks(outputTemplate: List<Line>, contextLines: Int): List<OutputBlock> {
     val blocksAllBounds = mutableListOf<Int>()
 
-    // Сначала мы находим индексы всех изменённых блоков и добавляем к ним строки контекста.
+    // First we calculate indexes of all changed blocks and add context lines around them.
     for (i in outputTemplate.indices) {
         when {
             ((i == 0 && outputTemplate[i].lineMarker != LineMarker.COMMON) ||
@@ -40,7 +40,7 @@ fun getUnifiedBlocks(outputTemplate: List<Line>, contextLines: Int): List<Output
         blocksAllBounds.add(outputTemplate.lastIndex)
     }
 
-    // Затем необходимо объединить пересекающиеся блоки.
+    // Then we need to remove duplicate lines in order to properly merge overlapping blocks.
     val blocksUnifiedBounds = mutableListOf<UnifiedInternalBlock>()
     blocksUnifiedBounds.add(UnifiedInternalBlock(blocksAllBounds[0]))
     for (i in 1 until blocksAllBounds.lastIndex step 2) {
@@ -51,8 +51,7 @@ fun getUnifiedBlocks(outputTemplate: List<Line>, contextLines: Int): List<Output
     }
     blocksUnifiedBounds.last().rightBound = blocksAllBounds.last()
 
-    // После этого надо преобразовать блоки в формате UnifiedInternalBlock в формат OutputBlock, добавив определённую
-    // информацию.
+    // After that we need to add some information to transform UnifiedInternalBlock into OutputBlock.
     val blocksResult = mutableListOf<OutputBlock>()
     var commonLinesCnt = 0
     var deletedLinesCnt = 0
@@ -93,19 +92,18 @@ fun getUnifiedBlocks(outputTemplate: List<Line>, contextLines: Int): List<Output
 }
 
 /**
- * Вспомогательная функция для «объединённого» формата вывода. Преобразует время в формате UNIX [epochValue] (количество
- * миллисекунд, прошедших с 1 января 1970 года) в читаемый вид. Использует установленный на компьютере часовой пояс.
+ * „unified“ output service function. Transforms UNIX epoch time [epochValue] (the number of milliseconds passed since
+ * the 1st January of 1970) into readable format. Uses this computer time zone.
  */
 fun convertEpochToReadableTime(epochValue: Long): OffsetDateTime {
     return OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochValue), ZoneId.systemDefault())
 }
 
 /**
- * Вспомогательная функция для «объединённого» формата вывода. В блоке [block] считает количество строк, которые находятся
- * в одном из файлов. Ясно, что, например, для первого файла это будет количество общих строк плюс количество
- * удалённых строк и аналогично для второго файла.
- * [outputTemplate] нужен так как блоки хранят лишь индексы, но не сами строки. [ignoredLineMarker] позволяет определить
- * какой тип строк надо игнорировать (например, для первого файла это будут добавленные строки)
+ * „unified“ output service function. Counts a number of lines in [block] which are present in one of the files.
+ * E. g. for first file it's the number of common lines in [block] plus the number of deleted lines.
+ * [outputTemplate] is needed to distinguish lines (common/deleted/added). [ignoredLineMarker] tells which
+ * type of lines is to be ignored (e. g. added lines for the first file)
  */
 fun getRelativeBlockLength(block: OutputBlock, outputTemplate: List<Line>, ignoredLineMarker: LineMarker): Int {
     val blockRange = block.templateStart until block.templateStart + block.length
@@ -113,15 +111,16 @@ fun getRelativeBlockLength(block: OutputBlock, outputTemplate: List<Line>, ignor
 }
 
 /**
- * «Объединённый» формат вывода (используется, например, в Github)
- * Сначала выводятся имена сравниваемых файлов и время последнего изменения этих файлов (для этого нужны объекты файлов
- * [file1Object] и [file2Object]). Затем выводятся блоки изменений с контекстом [contextLines] строк около каждого
- * блока (по умолчанию три строки). Если блоки с контекстом пересекаются, то они объединяются в один блок. Каждый блок
- * предваряется заголовком в формате "@@ -s1,l1 +s2,l2 @@" (на выводе без кавычек), где s1 — начало блока относительно
- * первого файла, l1 — количество строк в блоке, содержащихся в первом файле. Аналогично s2 и l2 определяются для второго
- * файла.
- * Статус каждой строчки хранится в [outputTemplate]. Так как в outputTemplate хранятся лишь индексы строк, нужен общий
- * словарь [stringsDictionary], где хранятся сами строки файлов.
+ * „Unified“ output format (used in GitHub)
+ * First two lines are the names of compared files [file1Object], [file2Object] and the time of last modification of each
+ * file. Then added/deleted/changed blocks are printed. Each block contains as much as possible, but
+ * no more than [contextLines] context lines around it (those are common lines, they are not printed in „normal“ mode).
+ * If blocks are overlapping, they are printed merged. Each block is preceded by line describing changes in the following
+ * format: "@@ -s1,l1 +s2,l2 @@" (actual output is without double quotes), where s1 is the beginning of the block in first
+ * file relative terms, l1 is the number of lines in the block which are present in the first file. s2 and l2 are defined
+ * similar.
+ * Information about lines status (common, added or deleted) is stored [outputTemplate].
+ * Since [outputTemplate] only stores indexes of lines, we need [stringsDictionary] to print strings themselves.
  */
 fun unifiedOutput(
     stringsDictionary: List<String>,

@@ -10,9 +10,9 @@ import com.dodolfin.diff.output.unified.unifiedOutput
 import java.io.File
 
 /**
- * Данные, необходимые для сравнения и вывода. [stringsDictionary] — общий словарь строчек из двух файлов,
- * [outputTemplate] — заготовка для вывода, в которой строчки расположены в нужном порядке, и затем,
- * в зависимости от конкретного формата, убирает какие-то строчки, [comparisonData] описан далее.
+ * Data required for comparing files and pretty-printing the results of comparing. [stringsDictionary] stores all
+ * lines from both files. [outputTemplate] stores a „merge“ of two files (described below), [comparisonData] is described in
+ * compare.kt.
  */
 data class ComparisonOutputData(
     val stringsDictionary: List<String>,
@@ -20,8 +20,8 @@ data class ComparisonOutputData(
     val comparisonData: ComparisonData
 ) {
     /**
-     * Алгоритм, похожий на сортировку объединением, объединяет строки двух файлов нужном для вывода порядке (общие строки идут
-     * по порядку, если есть удаление и добавление в одной точке LCS, то сначала выводится удаление, а затем добавление).
+     * Merges two files in order suitable for printing the results of comparing. Common lines order is same as in original files,
+     * in changed (with both addition and deletion) blocks deleted lines go before added.
      */
     fun produceOutputTemplate() {
         val file1 = this.comparisonData.file1
@@ -48,7 +48,7 @@ data class ComparisonOutputData(
     }
 
     /**
-     * Сравнивает файлы и делает заготовку для вывода. Сделано для удобства работы с comparisonOutputData.
+     * Compares files and produces outputTemplate. Made for convenient work with comparisonOutputData.
      */
     fun comparisonAndOutputTemplate() {
         this.comparisonData.markNotCommonLines()
@@ -58,10 +58,12 @@ data class ComparisonOutputData(
 }
 
 /**
- * Почти все режимы ввода предусматривают вывод каждого изменения в отдельном блоке (с контекстом или без).
- * [templateStart] — индекс начала блока в заготовке вывода outputTemplate, [file1Start] и [file2Start] либо номер
- * первой строчки в соответствующем файле, если она входит в блок, либо номер последней строчки в соответствующем файле
- * до начала блока, [length] — длина блока в строчках, [blockType] — специфика «нормального» режима вывода
+ * Almost all output formats imply printing of changes in separate blocks (with or without context lines), hence
+ * this data class was created.
+ * [templateStart] is the index of the block start in outputTemplate, [file1Start] and [file2Start] are either
+ * indexes of the first line in the corresponding file, if it's in the block, either the index of the most bottom line
+ * in the corresponding file before the beginning of the block, [length] is size of block in lines,
+ * [blockType] is used only for „normal“ output format
  */
 data class OutputBlock(
     val templateStart: Int,
@@ -72,30 +74,30 @@ data class OutputBlock(
 )
 
 /**
- * Для «нормального» режима вывода необходимо различать блоки, где производится удаление (DELETE) и добавление (ADD).
- * Для остальных режимов вывода тип блока не имеет значения (DOESNT_MATTER)
+ * We should distinguish deletion and addition blocks when in „normal“ output format. For all other output
+ * formats the type of block doesn't matter (DOESNT_MATTER).
  */
 enum class BlockType {
     DOESNT_MATTER, ADD, DELETE
 }
 
 /**
- * В разных режимах вывода используются разные символы, чтобы показать, что очередная строка была удалена ([deletedPrefix]),
- * добавлена ([addedPrefix]), есть в обоих файлах ([commonPrefix])
+ * In different output formats we use different characters to precede deleted ([deletedPrefix]), added ([addedPrefix])
+ * or common ([commonPrefix]) line.
  */
 data class OutputStyle(val commonPrefix: String, val deletedPrefix: String, val addedPrefix: String)
 
 /**
- * Стили вывода для разных режимов
+ * Output styles for different output formats
  */
 val plusMinusStyle = OutputStyle("  ", "- ", "+ ")
 val unifiedStyle = OutputStyle(" ", "-", "+")
 val normalStyle = OutputStyle("  ", "< ", "> ")
 
 /**
- * Вывести на печать какой-то блок [block] из заготовки для вывода [outputTemplate]. Так как в outputTemplate хранятся
- * лишь индексы строк, нужен общий словарь [stringsDictionary], где хранятся сами строки файлов. Для разных
- * режимов вывода нужны разные символы, показывающие статус строки — эта информация хранится в [style].
+ * Print a block [block] from [outputTemplate]. Since [outputTemplate] only stores indexes of lines,
+ * we need [stringsDictionary] to print strings themselves. [style] stores characters needed to display status of string
+ * in different output formats.
  */
 fun printBlock(stringsDictionary: List<String>, outputTemplate: List<Line>, block: OutputBlock, style: OutputStyle) {
     outputTemplate.slice(block.templateStart until block.templateStart + block.length).forEach { line ->
@@ -108,16 +110,16 @@ fun printBlock(stringsDictionary: List<String>, outputTemplate: List<Line>, bloc
 }
 
 /**
- * Выводит объединение двух файлов [outputTemplate]. Так как в outputTemplate хранятся лишь индексы строк,
- * нужен общий словарь [stringsDictionary], где хранятся сами строки файлов.
+ * Simply prints whole [outputTemplate]. Since [outputTemplate] only stores indexes of lines,
+ * we need [stringsDictionary] to print strings themselves.
  */
 fun plainOutput(stringsDictionary: List<String>, outputTemplate: List<Line>) {
     printBlock(stringsDictionary, outputTemplate, OutputBlock(0, 0, 0, outputTemplate.size), plusMinusStyle)
 }
 
 /**
- * На основе аргументов [parsedArgs], переданных программе, осуществляет вывод в нужном формате. [comparisonOutputData]
- * нужен для вывода, объекты файлов [file1Object] и [file2Object] нужны для «объединённого» формата вывода.
+ * Chooses appropriate (using [parsedArgs]) output format and performs output. We need [comparisonOutputData]
+ * for the output itself, [file1Object] and [file2Object] are used in „unified“ output format.
  */
 fun output(
     comparisonOutputData: ComparisonOutputData,

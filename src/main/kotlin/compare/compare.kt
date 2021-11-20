@@ -3,20 +3,19 @@ package com.dodolfin.diff.compare
 import com.dodolfin.diff.output.ComparisonOutputData
 
 /**
- * Используется для восстановления ответа в решении задачи о LCS
+ * Used for answer reconstruction in LCS finding algorithm
  */
 enum class ReconstructionMarker {
     NONE, REMOVE_FROM_LCS, LEFT, UP
 }
 
 /**
- * Данные, необходимые для сравнения файлов. [file1] и [file2] хранятся в виде индексов соответствующих строк в
+ * Stores data needed to compare files. [file1] and [file2] are stored as a list of sequence of corresponding strings in
  * stringsDictionary
  */
 data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
     /**
-     * Небольшая оптимизация алгоритма поиска LCS — заранее отмечает строчки, которых нет в другом файле, удалёнными или
-     * добавленными.
+     * Speeds up LCS finding algorithm a little by marking lines present only in one file as deleted or added.
      */
     fun markNotCommonLines() {
         val indicesCount = MutableList(2) { MutableList(this.file1.size + this.file2.size) { 0 } }
@@ -39,27 +38,28 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
 
 
     /**
-     * Сравнивает два файла, содержащихся в этом объекте.
+     * Compares two files that are stored in this object.
      */
     fun compareTwoFiles() {
-        // Перед тем как сравнивать строчки, оставим только те, для которых ещё неизвестно, входят они в LCS или нет
+        // Before comparing we filter out lines which are already marked as common, added or deleted
         val file1 = this.file1.filter { it.lineMarker == LineMarker.NONE }
         val file2 = this.file2.filter { it.lineMarker == LineMarker.NONE }
 
         /*
-         * LCS означает Longest Common Subsequence — наибольшую общую подпоследовательность
-         * В массиве LCSMemoization хранятся значения НОП для всех возможных префиксов двух файлов,
-         * а в массиве LCSReconstruction хранятся данные для восстановления самой LCS.
+         * LCS stands for Longest Common Subsequence
+         * LCSMemoization stores LCS values for every possible combination of two files prefixes,
+         * and LCSReconstruction stores data for reconstructing the subsequence itself.
          */
         val LCSMemoization = MutableList(file1.size + 1) { MutableList(file2.size + 1) { 0 } }
         val LCSReconstruction =
             MutableList(file1.size + 1) { MutableList(file2.size + 1) { ReconstructionMarker.NONE } }
 
         /*
-         * В массиве LCSReconstruction значение
-         * REMOVE_FROM_LCS означает, что в точке [prefix1 + 1][prefix2 + 1] последние строки совпали и их выгодно было включить в НОП
-         * LEFT означает, что значение НОП было лучше в точке [prefix1][prefix2 + 1]
-         * UP означает, что значение НОП было лучше в точке [prefix1 + 1][prefix2]
+         * LCSReconstruction values explanation:
+         * REMOVE_FROM_LCS means that last character is same in the point [prefix1 + 1][prefix2 + 1] and we should
+         *                 add it to our LCS
+         * LEFT            means that the length of LCS was greater in the point [prefix1][prefix2 + 1]
+         * UP              means that the length of LCS was greater in the point [prefix1 + 1][prefix2]
          */
         for (prefix1 in file1.indices) {
             for (prefix2 in file2.indices) {
@@ -80,12 +80,12 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
             }
         }
 
-        // Восстановление ответа
-        // Сначала отметим все строки из первого и второго файла как не входящие в LCS
+        // Answer reconstruction
+        // First we assume that LCS is empty by marking all lines as either deleted or added
         file1.forEach { it.lineMarker = LineMarker.DELETED }
         file2.forEach { it.lineMarker = LineMarker.ADDED }
 
-        // В цикле отметим строки, на самом деле входящие в LCS
+        // In the following cycle we actually mark LCS lines as common
         var prefix1 = file1.size
         var prefix2 = file2.size
         while (prefix1 != 0 && prefix2 != 0) {
@@ -103,23 +103,21 @@ data class ComparisonData(val file1: List<Line>, val file2: List<Line>) {
 }
 
 /**
- * Обозначает строчку файла, хранит [stringIndex] — индекс строчки в общем словаре строк stringsDictionary и
- * [lineMarker] — роль строчки в изменяющей последовательности строки
+ * Stores line of the file. [stringIndex] is a number of line in stringsDictionary.
+ * [lineMarker] shows if that line was added, deleted or is common
  */
 data class Line(val stringIndex: Int, var lineMarker: LineMarker = LineMarker.NONE)
 
 /**
- * Обозначает статус строки согласно алгоритму LCS (COMMON — входит в LCS, DELETED — в первом файле и в LCS не входит и
- * была удалена, ADDED — аналогично DELETED, была добавлена)
+ * Stores line status (COMMON: line is in LCS, DELETED: line is in the first file and not in LCS, was delete,
+ * ADDED: DELETED, but vice versa)
  */
 enum class LineMarker {
     NONE, COMMON, DELETED, ADDED
 }
 
 /**
- * Преобразовать содержимое файлов в объект типа ComparisonOutputData, в котором содержится общий словарь строк,
- * содержимое файлов в формате Line (индекс строки в словаре и её положение в LCS) и заготовка для вывода, позже
- * заполняемая в функции produceOutputTemplate.
+ * Transform file 1 and file 2 contents to the ComparisonOutputData instance.
  */
 fun stringsToLines(file1Strings: List<String>, file2Strings: List<String>): ComparisonOutputData {
     val stringsDictionary = mutableSetOf<String>()
